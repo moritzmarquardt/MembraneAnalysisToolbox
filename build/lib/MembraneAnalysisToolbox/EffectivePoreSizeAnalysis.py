@@ -53,8 +53,8 @@ class EffectivePoreSizeAnalysis:
         
         self.Universe = mda.Universe(topology_file, trajectory_file)
 
-        self.membrane_atom_positions = self._readPositions(membrane_resnames)
-        self.solvent_atom_positions = self._readPositions(solvent_resnames)
+        self.membrane_atom_positions = self._readPositions(self,membrane_resnames)
+        self.solvent_atom_positions = self._readPositions(self,solvent_resnames)
 
         self.membrane_atom_positions_filtered = self._filterPositions(self.membrane_atom_positions, y_middle, y_range, z_min, z_max)
         self.solvent_atom_positions_filtered = self._filterPositions(self.solvent_atom_positions, y_middle, y_range, z_min, z_max)
@@ -78,7 +78,7 @@ class EffectivePoreSizeAnalysis:
         - positions (numpy.ndarray): Array of atom positions.
         """
         atoms = self.Universe.select_atoms('resname ' + ' or resname '.join(resnames))
-        positions = np.zeros((self.Universe.trajectory.n_frames,len(atoms),3))
+        positions = np.zeros((self.Universe.trajectory.n_frames),len(atoms),3)
         for ts in self.Universe.trajectory:
             positions[ts.frame,:,:] = atoms.positions
         return positions
@@ -180,7 +180,6 @@ class EffectivePoreSizeAnalysis:
         return avrg_lower_edge, avrg_upper_edge
 
     def plot(self):
-        # TODO: Does not work yet
         """
         Plot the data.
 
@@ -199,4 +198,4 @@ class EffectivePoreSizeAnalysis:
         plt.title('Histogram Line Plot along the X-axis with Y and Z constraints for Atoms')
         plt.grid(True)
         plt.legend()
-        # plt.show()
+        plt.show()

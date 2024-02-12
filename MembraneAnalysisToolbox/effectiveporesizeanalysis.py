@@ -43,6 +43,7 @@ class EffectivePoreSizeAnalysis:
         - z_min (float): Minimum value for the z-axis constraint.
         - z_max (float): Maximum value for the z-axis constraint.
         """
+        
         if os.path.splitext(topology_file)[1] == '.tpr' and trajectory_file is None:
             raise ValueError("A trajectory file is required when using a .tpr topology file.")
         if not (os.path.splitext(topology_file)[1] == '.tpr' or os.path.splitext(topology_file)[1] == '.gro'):

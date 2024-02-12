@@ -147,11 +147,11 @@ class EffectivePoreSizeAnalysis:
         Returns:
         - pore_size (float): The calculated effective pore size.
         """
-        self.lower_edge, self.upper_edge = self.calculate_pore_size()
+        self.lower_edge, self.upper_edge = self._calculate_pore_size()
         effective_pore_size = np.abs(self.lower_edge - self.upper_edge)  # in Angstroms
         return effective_pore_size
     
-    def calculate_pore_size(self):
+    def _calculate_pore_size(self):
         """
         Calculate the lower and upper edges of the pore size distribution based on the averaging mathod.
 

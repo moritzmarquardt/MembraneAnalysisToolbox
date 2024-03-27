@@ -5,6 +5,8 @@ import numpy as np
 import scipy.stats as stats
 import scipy.optimize as optimize
 from sklearn.neighbors import KernelDensity
+from scipy.stats import gaussian_kde
+import time
 
 class EffectivePoreSizeAnalysis:
     """
@@ -45,6 +47,8 @@ class EffectivePoreSizeAnalysis:
         - z_min (float): Minimum value for the z-axis constraint.
         - z_max (float): Maximum value for the z-axis constraint.
         """
+
+        self.start = time.time()
         
         if os.path.splitext(topology_file)[1] == '.tpr' and trajectory_file is None:
             raise ValueError("A trajectory file is required when using a .tpr topology file.")
@@ -62,20 +66,23 @@ class EffectivePoreSizeAnalysis:
         self.membrane_atom_positions = self._readPositions(membrane_resnames)
         self.solvent_atom_positions = self._readPositions(solvent_resnames)
         if self.verbose:
-            print("Positions read")
+            print("Positions read after " + str(time.time() - self.start) + " seconds")
 
         self.z_min, self.z_max = self._find_zConstraints(self.membrane_atom_positions) # find the z constraints self.z_min and self.z_max
+        # self.z_min = 133
+        # self.z_max = 143
+        self.y_middle, self.y_range = self._find_yConstraints(self.membrane_atom_positions) # find the y constraints self.y_min and self.y_max
 
         self.membrane_atom_positions_filtered = self._filterPositions(self.membrane_atom_positions, self.y_middle, self.y_range, self.z_min, self.z_max)
         self.solvent_atom_positions_filtered = self._filterPositions(self.solvent_atom_positions, self.y_middle, self.y_range, self.z_min, self.z_max)
         if self.verbose:
-            print("Positions filtered")
+            print("Positions filtered after " + str(time.time() - self.start) + " seconds")
 
         bins = "auto"
-        self.membrane_hist, self.membrane_hist_edges = np.histogram(self.membrane_atom_positions_filtered[::50], density=1,bins=bins)
-        self.solvent_hist, self.solvent_hist_edges = np.histogram(self.solvent_atom_positions_filtered[::50], density=1,bins=bins)
+        self.membrane_hist, self.membrane_hist_edges = np.histogram(self.membrane_atom_positions_filtered, density=1,bins=bins)
+        self.solvent_hist, self.solvent_hist_edges = np.histogram(self.solvent_atom_positions_filtered, density=1,bins=bins)
         if self.verbose:
-            print("Histograms calculated")
+            print("Histograms calculated after " + str(time.time() - self.start) + " seconds")
 
         def membrane_hist_func(x):
             membrane_hist_edges_middle = self.membrane_hist_edges[0:-1] + np.diff(self.membrane_hist_edges)/2
@@ -93,6 +100,8 @@ class EffectivePoreSizeAnalysis:
             return np.interp(x, solvent_hist_edges_middle, solvent_hist)
         self.membrane_hist_func = membrane_hist_func
         self.solvent_hist_func = solvent_hist_func
+        if self.verbose:
+            print("Histogram functions defined after " + str(time.time() - self.start) + " seconds")
 
 
 
@@ -130,15 +139,7 @@ class EffectivePoreSizeAnalysis:
         plt.ylabel('Frequency')
 
         plt.figure()
-        plt.hist(self.membrane_atom_positions[:,:,1].flatten())
-        # kde = KernelDensity(kernel='gaussian').fit(self.membrane_atom_positions[:,:,1].flatten().reshape(-1, 1))
-        # x = np.linspace(self.membrane_atom_positions[:,:,1].min(), self.membrane_atom_positions[:,:,1].max(), 100)
-        # log_dens = kde.score_samples(x.reshape(-1, 1))
-        # plt.plot(x, np.exp(log_dens), color='red', label='Kernel Approximation')
-        # kde = stats.gaussian_kde(self.membrane_atom_positions[:,:,1].flatten())
-        # print(kde.factor)
-        # x = np.linspace(self.membrane_atom_positions[:,:,1].min(), self.membrane_atom_positions[:,:,1].max(), 100)
-        # plt.plot(x, kde(x), color='red', label='Kernel Approximation')
+        plt.hist(self.membrane_atom_positions[:,:,1].flatten(), bins=100)
         plt.legend()
         plt.axvline(x=self.y_middle - self.y_range/2, color='r', linestyle='--')  # y_min line
         plt.axvline(x=self.y_middle + self.y_range/2, color='r', linestyle='--')  # y_max line
@@ -147,13 +148,13 @@ class EffectivePoreSizeAnalysis:
         plt.ylabel('Frequency')
 
         plt.figure()
-        plt.hist(self.membrane_atom_positions[:,:,2].flatten())
+        plt.hist(self.membrane_atom_positions[:,:,2].flatten(), bins=100)
         plt.axvline(x=self.z_min, color='r', linestyle='--')  # z_min line
         plt.axvline(x=self.z_max, color='r', linestyle='--')  # z_max line
         plt.title('Histogram for z-axis')
         plt.xlabel('X-axis in Angstroms')
         plt.ylabel('Frequency')
-        plt.show()
+        # plt.show()
 
     def _find_zConstraints(self, membrane_atom_positions):
         z_min = membrane_atom_positions[:,:,2].min()
@@ -161,6 +162,18 @@ class EffectivePoreSizeAnalysis:
         z_max = (z_min + z_max) / 2 + (z_max - z_min) / 2 * 0.8
         z_min = (z_min + z_max) / 2 - (z_max - z_min) / 2 * 0.8
         return z_min, z_max
+    
+    def _find_yConstraints(self, membrane_atom_positions):
+        """y_profile = stats.gaussian_kde(membrane_atom_positions[:,:,1].flatten())
+        plt.figure()
+        x = np.linspace(membrane_atom_positions[:,:,1].min(), membrane_atom_positions[:,:,1].max(), 1000)
+        plt.plot(x, y_profile(x))
+        plt.plot()
+        def holefunc(x):
+            return x - y_profile(x) 
+        y_middle, y_range = 0, 0
+        return y_middle, y_range"""
+        return self.y_middle, self.y_range
     
     def _filterPositions(self, positions, y_middle, y_range, z_min, z_max):
         """
@@ -231,8 +244,11 @@ class EffectivePoreSizeAnalysis:
             def intersection(x):
                 return self.membrane_hist_func(x) - self.solvent_hist_func(x)
             
-            avrg_lower_edge = optimize.root_scalar(intersection, bracket=[40, 60], method='brentq').root
-            avrg_upper_edge = optimize.root_scalar(intersection, bracket=[60, 80], method='brentq').root
+            min_x_membrane = self.membrane_hist_edges[0]
+            max_x_membrane = self.membrane_hist_edges[-1]
+            # print(min_x_membrane, max_x_membrane)
+            avrg_lower_edge = optimize.root_scalar(intersection, bracket=[min_x_membrane, (max_x_membrane + min_x_membrane)/2], method='brentq').root
+            avrg_upper_edge = optimize.root_scalar(intersection, bracket=[(max_x_membrane + min_x_membrane)/2, max_x_membrane ], method='brentq').root
 
         return avrg_lower_edge, avrg_upper_edge
     
@@ -255,4 +271,45 @@ class EffectivePoreSizeAnalysis:
         plt.title('Histogram Line Plot along the X-axis with Y and Z constraints for Atoms')
         plt.grid(True)
         plt.legend()
-        plt.show()
+        # plt.show()
+
+    def analyseDensity(self):
+        membrane_pos = self.membrane_atom_positions
+        solvent_pos = self.solvent_atom_positions
+        # combined_positions = np.concatenate((self.solvent_atom_positions, self.membrane_atom_positions), axis=1)
+
+        filtered_indices_mem = np.where(
+            (membrane_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) & 
+            (membrane_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + 5)
+        )
+        filtered_indices_sol = np.where(
+            (solvent_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) & 
+            (solvent_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + 5)
+        )
+
+        filtered_positions_mem = membrane_pos[filtered_indices_mem[0], filtered_indices_mem[1], 0:2]
+        filtered_positions_sol = solvent_pos[filtered_indices_sol[0], filtered_indices_sol[1], 0:2]
+
+
+        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T)
+        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T)
+
+        # Evaluate the KDE on a grid
+        xmin = min(filtered_positions_mem[:, 0])
+        xmax = max(filtered_positions_mem[:, 0])
+        xn = 100
+        ymin = min(filtered_positions_mem[:, 1])
+        ymax = max(filtered_positions_mem[:, 1])
+        yn = 100
+        x = np.linspace(xmin, xmax, xn)
+        y = np.linspace(ymin, ymax, yn)
+        X, Y = np.meshgrid(x, y)
+        Z_mem = np.reshape(kde_mem([X.ravel(), Y.ravel()]), X.shape)
+        Z_sol = np.reshape(kde_sol([X.ravel(), Y.ravel()]), X.shape)
+        Z_sol_norm = Z_sol / np.max(Z_sol)
+        Z_mem_norm = Z_mem / np.max(Z_mem)
+        Z = Z_mem_norm + Z_sol_norm
+        plt.figure()
+        plt.pcolormesh(X, Y, Z, shading='gouraud')
+        plt.colorbar()
+        plt.axis('equal')

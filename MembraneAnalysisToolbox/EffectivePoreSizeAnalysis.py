@@ -305,31 +305,34 @@ class EffectivePoreSizeAnalysis:
         membrane_pos = self.membrane_atom_positions
         solvent_pos = self.solvent_atom_positions
 
+        slice_height = 10
         filtered_indices_mem = np.where(
-            (membrane_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) & 
-            (membrane_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + 5)
+            (membrane_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - slice_height/2) & 
+            (membrane_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + slice_height/2)
         )
         filtered_indices_sol = np.where(
-            (solvent_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) & 
-            (solvent_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + 5)
+            (solvent_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - slice_height/2) & 
+            (solvent_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + slice_height/2)
         )
 
         filtered_positions_mem = membrane_pos[filtered_indices_mem[0], filtered_indices_mem[1], 0:2]
         filtered_positions_sol = solvent_pos[filtered_indices_sol[0], filtered_indices_sol[1], 0:2]
 
+        # factors = [0.12915711168106825, 0.23546063765517714]
+        # factors = [0.05, 0.05]
+        factors = ['scott', 'scott']
+        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T, factors[0])
+        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T, factors[1])
 
-        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T, 1)
-        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T, 1)
-
-        print(kde_mem.factor, kde_sol.factor)
+        print("Kde faktoren (mem, solv): " + str(kde_mem.factor) + ", " + str(kde_sol.factor))
 
         # Evaluate the KDE on a grid
         xmin = min(filtered_positions_mem[:, 0])
         xmax = max(filtered_positions_mem[:, 0])
-        xn = 100
+        xn = int((xmax - xmin))
         ymin = min(filtered_positions_mem[:, 1])
         ymax = max(filtered_positions_mem[:, 1])
-        yn = 100
+        yn = int((ymax - ymin))
         x = np.linspace(xmin, xmax, xn)
         y = np.linspace(ymin, ymax, yn)
         X, Y = np.meshgrid(x, y)

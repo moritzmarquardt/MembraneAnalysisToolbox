@@ -274,9 +274,36 @@ class EffectivePoreSizeAnalysis:
         # plt.show()
 
     def analyseDensity(self):
+        combined_positions = np.concatenate((self.solvent_atom_positions, self.membrane_atom_positions), axis=1)
+
+        filtered_combined = np.where(
+            (combined_positions[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) &
+            (combined_positions[:, :, 2] <= (self.z_min + self.z_max)/2 + 5)
+        )
+
+        filtered_positions = combined_positions[filtered_combined[0], filtered_combined[1], 0:2]
+
+        kde = gaussian_kde(filtered_positions[::100,:].T)
+
+        # Evaluate the KDE on a grid
+        xmin = min(filtered_positions[:, 0])
+        xmax = max(filtered_positions[:, 0])
+        xn = 100
+        ymin = min(filtered_positions[:, 1])
+        ymax = max(filtered_positions[:, 1])
+        yn = 100
+        x = np.linspace(xmin, xmax, xn)
+        y = np.linspace(ymin, ymax, yn)
+        X, Y = np.meshgrid(x, y)
+        Z = np.reshape(kde([X.ravel(), Y.ravel()]), X.shape)
+        plt.figure()
+        plt.pcolormesh(X, Y, Z, shading='gouraud')
+        plt.colorbar()
+        plt.axis('equal')
+
+    def analyseDensityNormalised(self):
         membrane_pos = self.membrane_atom_positions
         solvent_pos = self.solvent_atom_positions
-        # combined_positions = np.concatenate((self.solvent_atom_positions, self.membrane_atom_positions), axis=1)
 
         filtered_indices_mem = np.where(
             (membrane_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - 5) & 
@@ -291,8 +318,10 @@ class EffectivePoreSizeAnalysis:
         filtered_positions_sol = solvent_pos[filtered_indices_sol[0], filtered_indices_sol[1], 0:2]
 
 
-        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T)
-        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T)
+        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T, 1)
+        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T, 1)
+
+        print(kde_mem.factor, kde_sol.factor)
 
         # Evaluate the KDE on a grid
         xmin = min(filtered_positions_mem[:, 0])

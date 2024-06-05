@@ -57,6 +57,7 @@ class EffectivePoreSizeAnalysis:
         self.verbose = verbose
         self.y_middle = y_middle
         self.y_range = y_range
+        self.solvent_resnames = solvent_resnames
         
         self.Universe = mda.Universe(topology_file, trajectory_file)
         if self.verbose:
@@ -262,15 +263,15 @@ class EffectivePoreSizeAnalysis:
         """
         plt.figure()
         x = np.linspace(self.membrane_hist_edges[0], self.membrane_hist_edges[-1], 1000)
-        plt.plot(x, self.membrane_hist_func(x), label='Membrane')
-        plt.plot(x, self.solvent_hist_func(x), label='Solvent')
-        plt.axvline(x=self.lower_edge, color='r', linestyle='--')
-        plt.axvline(x=self.upper_edge, color='r', linestyle='--')
-        plt.xlabel('X-axis in Angstroms')
-        plt.ylabel('Frequency')
-        plt.title('Histogram Line Plot along the X-axis with Y and Z constraints for Atoms')
+        plt.plot(x/10, self.membrane_hist_func(x), label='C')
+        plt.plot(x/10, self.solvent_hist_func(x), label='HEX & DOD')
+        plt.axvline(x=self.lower_edge/10, color='r', linestyle='--')
+        plt.axvline(x=self.upper_edge/10, color='r', linestyle='--')
+        plt.xlabel('X-axis in nm', fontsize='x-large')
+        plt.ylabel('Frequency', fontsize='x-large')
+        plt.title('Histogram along the X-axis with Z and Y constraints', fontsize='x-large')
         plt.grid(True)
-        plt.legend()
+        plt.legend(fontsize='large')
         # plt.show()
 
     def analyseDensity(self):
@@ -301,11 +302,10 @@ class EffectivePoreSizeAnalysis:
         plt.colorbar()
         plt.axis('equal')
 
-    def analyseDensityNormalised(self):
+    def analyseDensityNormalised(self, slice_height = 10, factors = ['scott', 'scott'], skip = 50):
         membrane_pos = self.membrane_atom_positions
         solvent_pos = self.solvent_atom_positions
 
-        slice_height = 10
         filtered_indices_mem = np.where(
             (membrane_pos[:, :, 2] >= (self.z_min + self.z_max)/2 - slice_height/2) & 
             (membrane_pos[:, :, 2] <= (self.z_min + self.z_max)/2 + slice_height/2)
@@ -320,9 +320,9 @@ class EffectivePoreSizeAnalysis:
 
         # factors = [0.12915711168106825, 0.23546063765517714]
         # factors = [0.05, 0.05]
-        factors = ['scott', 'scott']
-        kde_mem = gaussian_kde(filtered_positions_mem[::50,:].T, factors[0])
-        kde_sol = gaussian_kde(filtered_positions_sol[::50,:].T, factors[1])
+        
+        kde_mem = gaussian_kde(filtered_positions_mem[::skip,:].T, factors[0])
+        kde_sol = gaussian_kde(filtered_positions_sol[::skip,:].T, factors[1])
 
         print("Kde faktoren (mem, solv): " + str(kde_mem.factor) + ", " + str(kde_sol.factor))
 
@@ -342,6 +342,9 @@ class EffectivePoreSizeAnalysis:
         Z_mem_norm = Z_mem / np.max(Z_mem)
         Z = Z_mem_norm + Z_sol_norm
         plt.figure()
-        plt.pcolormesh(X, Y, Z, shading='gouraud')
+        plt.title('Density of C and ' + ' & '.join(map(str, self.solvent_resnames)) + ' molecules normed', fontsize='x-large')
+        plt.xlabel('X-axis in nm', fontsize='x-large')
+        plt.ylabel('Y-axis in nm', fontsize='x-large')
+        plt.pcolormesh(X/10, Y/10, Z, shading='gouraud')
         plt.colorbar()
         plt.axis('equal')

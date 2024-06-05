@@ -77,6 +77,7 @@ def path_cat(X, Y, ffs, ffe):
 
 
 # TODO make it more effficient (matrix operations of numpy to simplyfy the process?)
+# TODO remove squarerootts and quadratisize the operations
 def dur_dist_improved(S, bounds, p=1, p_middle=1):
     """measure start and endpoint of passages through the bounds.
     returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)

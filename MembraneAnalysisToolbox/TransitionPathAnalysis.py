@@ -68,7 +68,7 @@ class TransitionPathAnalysis:
         if self.verbose:
             print(selector + " loaded.")
     
-    def inspect(self, selectors):
+    def inspect(self, selectors, z_lower = None, L = None):
         if type(selectors) is not list:
             selectors = [selectors]
 
@@ -96,8 +96,11 @@ class TransitionPathAnalysis:
         ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
         ax_z_dist.set_xlabel("z", fontsize="x-large")
         ax_z_dist.set_ylabel("Frequency", fontsize="x-large")
+        if z_lower is not None and L is not None:
+            ax_z_dist.axvline(z_lower, color='r', linestyle='--', label='z_lower')
+            ax_z_dist.axvline(z_lower+L, color='r', linestyle='--', label='z_upper')
         ax_z_dist.legend()
-
+        
         fig_x_dist, ax_x_dist = plt.subplots()
         fig_x_dist.suptitle("Histogram of x", fontsize="x-large")
         ax_x_dist.hist(x, bins=100, density=True, alpha=0.5, label=selectors)
@@ -114,35 +117,22 @@ class TransitionPathAnalysis:
 
         plt.show()
 
-    def find_z_limits(self, mem_selector):
-        if type(mem_selector) is not list:
-            mem_selector = [mem_selector]
-
-        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
-        if len(seles_not_loaded) > 0:
-            for sele in seles_not_loaded:
-                self._allocateTrajectory(sele)
-
-        total_elements = sum(self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1] for sele in selectors)
-        x = np.empty(total_elements)
-        y = np.empty(total_elements)
-        z = np.empty(total_elements)
-        index = 0
-        # Collect data for each selector and store directly in the pre-allocated arrays
-        for sele in selectors:
-            positions = self.trajectories[sele]
-            n_elements = positions.shape[0] * positions.shape[1]
-            x[index:index + n_elements] = positions[:, :, 0].flatten()
-            y[index:index + n_elements] = positions[:, :, 1].flatten()
-            z[index:index + n_elements] = positions[:, :, 2].flatten()
-            index += n_elements
+    def find_z_lower_hexstruc(self, mem_selector, L):
+        if type(mem_selector) is list:
+            mem_selector = mem_selector[0]
         
-        fig_z_dist, ax_z_dist = plt.subplots()
-        fig_z_dist.suptitle("Histogram of z", fontsize="x-large")
-        ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
-        ax_z_dist.set_xlabel("z", fontsize="x-large")
-        ax_z_dist.set_ylabel("Frequency", fontsize="x-large")
-        ax_z_dist.legend()
+        if mem_selector not in self.trajectories:
+            self._allocateTrajectory(mem_selector)
+
+        z = self.trajectories[mem_selector][:, :, 2].flatten()
+        
+        _, bins = np.histogram(z, bins=100, density=True)
+
+        z_lower = bins[0]
+        z_upper = bins[-1]
+        z_middle = (z_lower + z_upper) / 2
+
+        return z_middle - L/2
 
 
     def calc_passagetimes(self, selectors, z_lower, L):
@@ -197,6 +187,26 @@ class TransitionPathAnalysis:
         ax2.set_xlim(0,x_lim)
 
         D_hom_cdf=params_hom_cdf[0]
+
+        # plot PDF
+
+        """ PREPARE DATA """
+        bins = int(10*np.max(passage_times)/centertime)
+        histo, edges = np.histogram(passage_times, bins, density=True);
+        center=edges-(edges[2]-edges[1]);
+        center=np.delete(center,0)
+        edges=np.delete(edges,0)
+
+        """ PLOT DATA """
+        x = x_cdf
+        y2 = self.fitfunc_hom(x,params_hom_cdf[0], L)
+
+        ax1.hist(passage_times,bins=len(center), density=True, color=[0,0.5,0.5])
+        ax1.plot(x[1:],y2[1:],label='hom', color='red', ls='dashed')
+        ax1.set_xlim(0,x_lim)
+        ax1.set_ylim(0,1.2*np.max(histo[0:]))
+        ax1.legend(loc='center right')
+
         return D_hom_cdf
     
 #########################################################################################
@@ -224,6 +234,17 @@ class TransitionPathAnalysis:
     def fitting_hom_cdf_lsq(self,x_data,y_data, L):
         res_robust = least_squares(self.fitfunc_hom_cdf_lsq(L), x0=20, loss ='soft_l1', f_scale=0.3, args=(x_data, y_data))
         return res_robust.x
+    
+    def fitfunc_hom(self,x,D,L):
+        i=151
+        result=0
+        for j in range(1,i):
+            result=result+self.hom(x,D,j,L)
+        return(2*np.pi**2*D/(L)**2*result)
+    
+    def hom(self,x,D,i,L):
+        t=(L)**2/(i**2*np.pi**2*D)
+        return((-1)**(i-1)*i**2*np.exp(-x/t))
 # Ende Funktionen aus Gottholds Skript ##################################################
 #########################################################################################
 

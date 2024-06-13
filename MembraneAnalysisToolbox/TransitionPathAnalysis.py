@@ -8,52 +8,29 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.optimize import least_squares
 
 class TransitionPathAnalysis:
-    """
-    Class for analyzing effective pore size.
-    Actually, the analysis is just a sequence of method calls. But here it is encapsulated in a class for clarity.
-
-    Attributes:
-    - topology_file (str): The path to the topology file: either .gro or .tpr.
-    - trajectory_file (str, optional): The path to the trajectory file: .xtc file. Defaults to None.
-    - membrane_resnames (list, optional): List of residue names for the membrane atoms. Defaults to None.
-    - solvent_resnames (list, optional): List of residue names for the solvent atoms. Defaults to None.
-    - y_min (float): Minimum value for the y-axis constraint.
-    - y_max (float): Maximum value for the y-axis constraint.
-    - z_min (float): Minimum value for the z-axis constraint.
-    - z_max (float): Maximum value for the z-axis constraint.
-    """
-
     def __init__(
             self, 
             topology_file: str, 
             trajectory_file: str = None,
-            membrane_selectors = None,
-            solvent_selectors = None,
-            verbose = False
+            verbose = False,
             ):
-        """
-        Initialize the EffectivePoreSizeAnalysis class.
-
-        Parameters:
-        - topology_file (str): The path to the topology file: either .gro or .tpr.
-        - trajectory_file (str, optional): The path to the trajectory file: .xtc file. Defaults to None.
-        - membrane_resnames (list, optional): List of residue names for the membrane atoms. Defaults to None.
-        - solvent_resnames (list, optional): List of residue names for the solvent atoms. Defaults to None.
-        - y_min (float): Minimum value for the y-axis constraint.
-        - y_max (float): Maximum value for the y-axis constraint.
-        - z_min (float): Minimum value for the z-axis constraint.
-        - z_max (float): Maximum value for the z-axis constraint.
-        """
         
-        if os.path.splitext(topology_file)[1] == '.tpr' and trajectory_file is None:
-            raise ValueError("A trajectory file is required when using a .tpr topology file.")
-        if not (os.path.splitext(topology_file)[1] == '.tpr' or os.path.splitext(topology_file)[1] == '.gro'):
-            raise ValueError("A topology file is required. Either a gro or a tpr file.")
+        self.topology_file = topology_file
+        self.trajectory_file = trajectory_file
         self.verbose = verbose
 
+        # Check if the files exist and have the correct file format
+        if not os.path.exists(topology_file) or not topology_file.endswith('.tpr'):
+            raise FileNotFoundError("Topology file does not exist or has wrong file format: A .tpr file is required.")
+        if os.path.exists(trajectory_file) and not trajectory_file.endswith('.xtc'):
+            raise FileNotFoundError("Trajectory file does not exist or has wrong file format: A .xtc file is required.")
+
+        # Build Universe using the MDAnalysis library
         self.u = mda.Universe(topology_file, trajectory_file)
-        #we want at least 5 steps per ns because transitions can last only 1ns and it needs steps to identify it as a passage
+        # Define how many (nth) frames are being analysed
+        # Here we calculate the nth based on the requirement that at least 5 frames are stored per ns of the simulation
         self.nth = int(np.floor(1000/self.u.trajectory.dt/5))
+        # Based on the nth, we calculate the number of analysed timesteps
         self.timesteps = int(np.ceil(self.u.trajectory.n_frames/self.nth))
         if self.verbose:
             print("Universe: " + str(self.u))
@@ -61,64 +38,59 @@ class TransitionPathAnalysis:
             print("step size: " + str(self.u.trajectory.dt) + " ps")
             print("simulation duration: " + str((self.u.trajectory.n_frames-1)*self.u.trajectory.dt/1000) + " ns")
             print("every " + str(self.nth) + "th frame is stored")
+            print("number of analysed frames: " + str(self.timesteps))
+            print("step size in analysis: " + str(self.u.trajectory.dt*self.nth) + " ps")
 
         
-        #STEP 1: Read the positions of the membrane and solvent atoms
-        self.positions_dict = {}
-        self.timeline = np.zeros(self.timesteps)
-        # for i, mem_sel in enumerate(membrane_selectors):
-        #     self.positions_dict[mem_sel] = self._readPositions(mem_sel, self.nth, self.timesteps)
-        # for i, solv_sel in enumerate(solvent_selectors):
-        #     self.positions_dict[solv_sel] = self._readPositions(solv_sel, self.nth, self.timesteps)
-        # if self.verbose:
-        #     print("Positions read")
-        #     for selector, positions in self.positions_dict.items():
-        #         print(f"Shape of positions for '{selector}': {positions.shape}")
+        # Trajectories of possible atoms/selectors will be stored in a dictionary
+        # for speed and efficiency only trajectories of selectors that are actually 
+        # needed will be loaded when accesing functions that need them
+        self.trajectories = {}
+        # Initialize timeline of the analysed frames
+        # The timeline is mostly used for plotting purposes
+        self.timeline = np.linspace(0, self.u.trajectory.n_frames*self.u.trajectory.dt, self.timesteps)
 
 
 
 
-    def _readPositions(self, selector, nth = 1, timesteps = None):
+    def _allocateTrajectory(self, selector):
         """
-        Read the positions of atoms with specified residue names.
-
-        Parameters:
-        - resname
-
-        Returns:
-        - positions (numpy.ndarray): Array of atom positions.
+        Safe the trajectories of the selectors to the dictionary
         """
-        atoms = self.u.select_atoms('resname ' + selector)
+        atoms = self.u.select_atoms(selector)
         if self.verbose:
+            print(selector + " loading...")
             print("number of " + selector + " atoms: " + str(atoms.n_atoms))
-        positions = np.zeros((atoms.n_atoms, timesteps, 3))
-        if self.timeline[1] == 0: # timeline has not been initialized yet
-            for i, ts in enumerate(self.u.trajectory[::nth]):
-                positions[:,i,:] = atoms.positions
-                self.timeline[i] = ts.time
-        else: # timeline has been initialized
-            for i, ts in enumerate(self.u.trajectory[::nth]):
-                positions[:,i,:] = atoms.positions
-            
-        return positions
+        positions = np.zeros((atoms.n_atoms, self.timesteps, 3))
+        for i, ts in enumerate(self.u.trajectory[::self.nth]):
+            positions[:,i,:] = atoms.positions
+        self.trajectories[selector] = positions
+        if self.verbose:
+            print(selector + " loaded.")
     
     def inspect(self, selectors):
-        seles_not_loaded = [sele for sele in selectors if sele not in self.positions_dict]
+        if type(selectors) is not list:
+            selectors = [selectors]
+
+        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
         if len(seles_not_loaded) > 0:
             for sele in seles_not_loaded:
-                print(sele + " loading...")
-                self.positions_dict[sele] = self._readPositions(sele, self.nth, self.timesteps)
+                self._allocateTrajectory(sele)
 
-        x = []
-        y = []
-        z = []
+        total_elements = sum(self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1] for sele in selectors)
+        x = np.empty(total_elements)
+        y = np.empty(total_elements)
+        z = np.empty(total_elements)
+        index = 0
+        # Collect data for each selector and store directly in the pre-allocated arrays
         for sele in selectors:
-            x.extend(self.positions_dict[sele][:,:,0].flatten())
-            y.extend(self.positions_dict[sele][:,:,1].flatten())
-            z.extend(self.positions_dict[sele][:,:,2].flatten())
+            positions = self.trajectories[sele]
+            n_elements = positions.shape[0] * positions.shape[1]
+            x[index:index + n_elements] = positions[:, :, 0].flatten()
+            y[index:index + n_elements] = positions[:, :, 1].flatten()
+            z[index:index + n_elements] = positions[:, :, 2].flatten()
+            index += n_elements
         
-        # print(z)
-
         fig_z_dist, ax_z_dist = plt.subplots()
         fig_z_dist.suptitle("Histogram of z", fontsize="x-large")
         ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
@@ -142,27 +114,69 @@ class TransitionPathAnalysis:
 
         plt.show()
 
+    def find_z_limits(self, mem_selector):
+        if type(mem_selector) is not list:
+            mem_selector = [mem_selector]
 
-    def calc_passagetimes(self, selectors, z_lower, z_upper):
-        seles_not_loaded = [sele for sele in selectors if sele not in self.positions_dict]
+        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
+        if len(seles_not_loaded) > 0:
+            for sele in seles_not_loaded:
+                self._allocateTrajectory(sele)
+
+        total_elements = sum(self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1] for sele in selectors)
+        x = np.empty(total_elements)
+        y = np.empty(total_elements)
+        z = np.empty(total_elements)
+        index = 0
+        # Collect data for each selector and store directly in the pre-allocated arrays
+        for sele in selectors:
+            positions = self.trajectories[sele]
+            n_elements = positions.shape[0] * positions.shape[1]
+            x[index:index + n_elements] = positions[:, :, 0].flatten()
+            y[index:index + n_elements] = positions[:, :, 1].flatten()
+            z[index:index + n_elements] = positions[:, :, 2].flatten()
+            index += n_elements
+        
+        fig_z_dist, ax_z_dist = plt.subplots()
+        fig_z_dist.suptitle("Histogram of z", fontsize="x-large")
+        ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
+        ax_z_dist.set_xlabel("z", fontsize="x-large")
+        ax_z_dist.set_ylabel("Frequency", fontsize="x-large")
+        ax_z_dist.legend()
+
+
+    def calc_passagetimes(self, selectors, z_lower, L):
+        if type(selectors) is not list:
+            selectors = [selectors]
+
+        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
         if len(seles_not_loaded) > 0:
             for sele in seles_not_loaded:
                 print(sele + " loading...")
-                self.positions_dict[sele] = self._readPositions(sele, self.nth, self.timesteps)
+                self._allocateTrajectory(sele)
 
         ffe = []
         ffs = []
         indizes = []
         for sele in selectors:
-            z = self.positions_dict[sele][:,:,2]
-            ffs_sele, ffe_sele, indizes_sele = tfm.dur_dist_improved(z, [z_lower, z_upper])
+            z = self.trajectories[sele][:,:,2]
+            ffs_sele, ffe_sele, indizes_sele = tfm.dur_dist_improved(z, [z_lower, z_lower+L])
             ffs.append(ffs_sele)
             ffe.append(ffe_sele)
             indizes.append(indizes_sele)
         
-        return ffs, ffe, indizes
+        return np.concatenate(ffs), np.concatenate(ffe), np.concatenate(indizes)
     
+
+    def plot_passagetimedist(self, passage_times):
+        plt.figure("Verteilung der Durchgangszeiten")
+        tfmp.plot_dist(passage_times,number_of_bins=10, max_range=np.max(passage_times))
+        plt.xlabel("Durchgangszeiten")
+        plt.ylabel("relative Häufigkeit")
+
+
     def calc_diffusion(self, passage_times, L, T):
+        # Calculate the diffusion coefficient using the mehtods of Gotthold Fläschner
         ecdf = ECDF(passage_times)
         idx = (np.abs(ecdf.y - 0.5)).argmin()
         centertime = ecdf.x[idx]
@@ -185,11 +199,8 @@ class TransitionPathAnalysis:
         D_hom_cdf=params_hom_cdf[0]
         return D_hom_cdf
     
-    def plot_passagetimedist(self, ffs, ffe, indizes):
-        pass
-
-
-    # Funktionen aus Gottholds Skript #####################################################
+#########################################################################################
+# Funktionen aus Gottholds Skript #######################################################
     def hom_cdf(self,x,D,i,L):
         t=(L)**2/(i**2*np.pi**2*D) #L^2/(i^2*pi^2*D)
         return((-1)**(i-1)*np.exp(-x/t)) #summand in Gl. 10 vanHijkoop
@@ -213,11 +224,7 @@ class TransitionPathAnalysis:
     def fitting_hom_cdf_lsq(self,x_data,y_data, L):
         res_robust = least_squares(self.fitfunc_hom_cdf_lsq(L), x0=20, loss ='soft_l1', f_scale=0.3, args=(x_data, y_data))
         return res_robust.x
-    # Ende Funktionen aus Gottholds Skript ##################################################
+# Ende Funktionen aus Gottholds Skript ##################################################
+#########################################################################################
 
 
-    def plot_passagetimedist(self, passage_times):
-        plt.figure("Verteilung der Durchgangszeiten")
-        tfmp.plot_dist(passage_times,number_of_bins=10, max_range=np.max(passage_times))
-        plt.xlabel("Durchgangszeiten")
-        plt.ylabel("relative Häufigkeit")

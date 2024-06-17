@@ -11,7 +11,7 @@ authors = [
 description = "A python packages for analysing Membranes and Carbon Materials"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE"}
+license = {file = "LICENCE"}
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

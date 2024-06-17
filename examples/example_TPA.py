@@ -1,6 +1,7 @@
 import MembraneAnalysisToolbox.TransitionPathAnalysis as TPA
 import matplotlib.pyplot as plt
 
+# TODO actually create the test xtc and topology file
 path = "./tests/"
 
 # STEP 1: initialise the Data into the class

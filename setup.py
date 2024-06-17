@@ -9,5 +9,5 @@ setup(
     author_email='st166545@stud.uni-stuttgart.de',
     license='MIT',
     packages=find_packages(),
-    install_requires=['numpy', 'matplotlib', 'scipy', 'MDAnalysis'],
+    install_requires=['numpy', 'matplotlib', 'scipy', 'MDAnalysis', 'statsmodels'],
 )

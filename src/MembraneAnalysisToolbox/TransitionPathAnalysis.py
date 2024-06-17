@@ -55,7 +55,18 @@ class TransitionPathAnalysis:
 
     def _allocateTrajectory(self, selector):
         """
-        Safe the trajectories of the selectors to the dictionary
+        Save the trajectories of the selectors to the dictionary.
+
+        Parameters:
+        selector (str): The selector used to select atoms from the universe.
+
+        Returns:
+        None
+
+        This method allocates and saves the trajectories of the selected atoms to the dictionary.
+        It initializes an array to store the positions of the atoms over time and populates it
+        by iterating over the trajectory frames. The resulting positions array is then stored
+        in the `trajectories` dictionary under the given selector key.
         """
         atoms = self.u.select_atoms(selector)
         if self.verbose:
@@ -68,7 +79,18 @@ class TransitionPathAnalysis:
         if self.verbose:
             print(selector + " loaded.")
     
-    def inspect(self, selectors, z_lower = None, L = None):
+    def inspect(self, selectors, z_lower=None, L=None):
+        """
+        Visualizes the histograms of the z, x, and y coordinates for the given selectors.
+
+        Parameters:
+            selectors (list or str): The selectors to inspect. If a single selector is provided as a string, it will be converted to a list.
+            z_lower (float, optional): The lower bound of the z-coordinate range to display on the histogram. Defaults to None.
+            L (float, optional): The length of the z-coordinate range to display on the histogram. Defaults to None.
+
+        Returns:
+            None
+        """
         if type(selectors) is not list:
             selectors = [selectors]
 
@@ -90,7 +112,7 @@ class TransitionPathAnalysis:
             y[index:index + n_elements] = positions[:, :, 1].flatten()
             z[index:index + n_elements] = positions[:, :, 2].flatten()
             index += n_elements
-        
+
         fig_z_dist, ax_z_dist = plt.subplots()
         fig_z_dist.suptitle("Histogram of z", fontsize="x-large")
         ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
@@ -100,7 +122,7 @@ class TransitionPathAnalysis:
             ax_z_dist.axvline(z_lower, color='r', linestyle='--', label='z_lower')
             ax_z_dist.axvline(z_lower+L, color='r', linestyle='--', label='z_upper')
         ax_z_dist.legend()
-        
+
         fig_x_dist, ax_x_dist = plt.subplots()
         fig_x_dist.suptitle("Histogram of x", fontsize="x-large")
         ax_x_dist.hist(x, bins=100, density=True, alpha=0.5, label=selectors)
@@ -118,6 +140,17 @@ class TransitionPathAnalysis:
         plt.show()
 
     def find_z_lower_hexstruc(self, mem_selector, L):
+        """
+        Find the z-coordinate of the lower boundary of the hexagonal structure
+        
+        Parameters:
+            mem_selector (str or list): The selector for the membrane trajectory.
+                If a list is provided, the first element will be used.
+            L (float): The length of the hexagonal structure.
+        
+        Returns:
+            float: The z-coordinate of the lower boundary of the hexagonal structure.
+        """
         if type(mem_selector) is list:
             mem_selector = mem_selector[0]
         
@@ -136,6 +169,18 @@ class TransitionPathAnalysis:
 
 
     def calc_passagetimes(self, selectors, z_lower, L):
+        """
+        Calculates the passage times for the given selectors.
+
+        Args:
+            selectors (list or str): The selectors to calculate passage times for.
+            z_lower (float): The lower bound of the z-coordinate range.
+            L (float): The length of the z-coordinate range.
+
+        Returns:
+            tuple: A tuple containing three arrays - concatenated first-first passage times (ffs),
+                   concatenated first-final passage times (ffe), and concatenated indices (indizes).
+        """
         if type(selectors) is not list:
             selectors = [selectors]
 
@@ -166,7 +211,18 @@ class TransitionPathAnalysis:
 
 
     def calc_diffusion(self, passage_times, L, T):
-        # Calculate the diffusion coefficient using the mehtods of Gotthold Fläschner
+        """
+        Calculate the diffusion coefficient using the methods of Gotthold Fläschner.
+
+        Args:
+            passage_times (array-like): Array of passage times.
+            L (float): Length parameter.
+            T (float): Temperature parameter.
+
+        Returns:
+            float: The diffusion coefficient.
+
+        """
         ecdf = ECDF(passage_times)
         idx = (np.abs(ecdf.y - 0.5)).argmin()
         centertime = ecdf.x[idx]

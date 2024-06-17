@@ -1,6 +1,5 @@
 import unittest
-# write unittests for python
-# now this is just so a test ist there as a framework, no actual test happening yet
+# right now this is just so a test ist there as a framework, no actual test happening yet
 
 
 class TestTFM(unittest.TestCase):

@@ -1,16 +1,12 @@
 import MembraneAnalysisToolbox.TransitionPathAnalysis as TPA
 import matplotlib.pyplot as plt
 
-'''
-this file is for testing and development purposes only
-'''
-
-path = "/bigpool/users/ac130484/project/finished_sim/hex/poresize/3nm_NVT/simulation_1/"
+path = "./tests/"
 
 # STEP 1: initialise the Data into the class
 Analysis2nm_1 = TPA.TransitionPathAnalysis( 
     topology_file = path + 'topol.tpr', 
-    trajectory_file = path + 'traj.xtc',
+    trajectory_file = path + 'test_traj.xtc',
     verbose = True
 )
 L = 180

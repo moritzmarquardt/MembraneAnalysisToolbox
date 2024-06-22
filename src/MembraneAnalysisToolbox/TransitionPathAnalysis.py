@@ -72,37 +72,6 @@ class TransitionPathAnalysis:
         # The timeline is mostly used for plotting purposes
         self.timeline = np.linspace(0, self.u.trajectory.n_frames*self.u.trajectory.dt, self.timesteps)
 
-
-    # def _allocateTrajectory(self, selector):
-    #     """
-    #     Save (allcate) the trajectories of the selectors to the dictionary.
-
-    #     Parameters:
-    #     selector (str): The selector used to select atoms from the universe by following MDA lingo.
-
-    #     Returns:
-    #     None
-
-    #     This method allocates and saves the trajectories of the selected atoms to the dictionary.
-    #     It initializes an array to store the positions of the atoms over time and populates it
-    #     by iterating over the trajectory frames. The resulting positions array is then stored
-    #     in the `trajectories` dictionary under the given selector key.
-    #     """
-    #     # select atoms from the universe based on the selector
-    #     atoms = self.u.select_atoms(selector)
-    #     if self.verbose:
-    #         print(selector + " loading...")
-    #         print("number of " + selector + " atoms: " + str(atoms.n_atoms))
-    #     # initialize an array to store the positions of the atoms over time
-    #     positions = np.zeros((atoms.n_atoms, self.timesteps, 3))
-    #     # populate the positions array by iterating over every nth frame of the trajectory
-    #     for i, ts in enumerate(self.u.trajectory[::self.nth]):
-    #         positions[:,i,:] = atoms.positions
-    #     # store the positions array in the dictionary under the given selector key
-    #     self.trajectories[selector] = positions
-    #     if self.verbose:
-    #         print(selector + " loaded.")
-
     def _allocateTrajectories(self, selectors):
         # check for the format of the selectors
         if isinstance(selectors, str):

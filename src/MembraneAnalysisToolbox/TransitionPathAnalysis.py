@@ -73,6 +73,15 @@ class TransitionPathAnalysis:
         self.timeline = np.linspace(0, self.u.trajectory.n_frames*self.u.trajectory.dt, self.timesteps)
 
     def _allocateTrajectories(self, selectors):
+        """
+        Allocates the trajectories of the given selectors in the trajectories dictionary.
+
+        Parameters:
+            selectors (list or str): The selectors to allocate trajectories for. If a single selector is provided as a string, it will be converted to a list.
+
+        Raises:
+            ValueError: If the selectors parameter is not a string or a list of strings.
+        """
         # check for the format of the selectors
         if isinstance(selectors, str):
             selectors = [selectors]

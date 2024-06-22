@@ -1,15 +1,17 @@
 import unittest
-# right now this is just so a test is there as a framework, no actual test happening yet
+
+"""
+Right now this is just a placeholder for the test cases that will be added later in order for the github actions to run successfully.
+
+TODO: 
+    - Add test cases for passage detection using sample membrane simulation data
+    - Add test cases for Diffusion Coefficient calculation using sample membrane simulation data
+"""
 
 
 class TestTFM(unittest.TestCase):
     def test_upper(self):
-        # test if the test works with a simple sum
-        sum = 3 + 3
-        self.assertEqual(sum, 6)
-
-    def hor_dist(self):
-        self.assertEqual(0, 0)
+        self.assertEqual(6, 6)
 
 
 if __name__ == "__main__":

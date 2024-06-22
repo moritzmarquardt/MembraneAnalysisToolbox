@@ -92,8 +92,6 @@ class TransitionPathAnalysis:
             self.trajectories[sele] = positions[indexes[i]:indexes[i+1],:,:]
 
     
-
-    
     def inspect(self, selectors, z_lower=None, L=None):
         """
         Visualizes the histograms of the z, x, and y coordinates for the given selectors.
@@ -111,18 +109,6 @@ class TransitionPathAnalysis:
 
         """
         self._allocateTrajectories(selectors)
-        # # check for the format of the selectors
-        # if isinstance(selectors, str):
-        #     selectors = [selectors]
-        # elif not isinstance(selectors, list):
-        #     raise ValueError("Selectors must be a string or a list of strings.")
-
-        # # calculate the selectors that are not already loaded in the trajectories dictionary
-        # seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
-        # # if there are selectors that are not loaded, allocate them using the built in _allocateTrajectory method
-        # if len(seles_not_loaded) > 0:
-        #     for sele in seles_not_loaded:
-        #         self._allocateTrajectory(sele)
 
         # calculate the total number of elements in the trajectories of the selectors to be able to allocate flat arrays for the histograms
         total_elements = sum(self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1] for sele in selectors)
@@ -180,9 +166,6 @@ class TransitionPathAnalysis:
             float: The z-coordinate of the lower boundary of the hexagonal structure.
         """
         self._allocateTrajectories(mem_selector)
-        # # Check if the trajectory of the membrane selector is already loaded and if not, load it
-        # if mem_selector not in self.trajectories:
-        #     self._allocateTrajectory(mem_selector)
 
         # Get the z-coordinates of the membrane trajectory
         z = self.trajectories[mem_selector][:, :, 2].flatten()
@@ -213,18 +196,6 @@ class TransitionPathAnalysis:
                    concatenated first-final passage times (ffe), and concatenated indices (indizes).
         """
         self._allocateTrajectories(selectors)
-        # # check for the format of the selectors
-        # if isinstance(selectors, str):
-        #     selectors = [selectors]
-        # elif not isinstance(selectors, list):
-        #     raise ValueError("Selectors must be a string or a list of strings.")
-
-        
-        # seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
-        # if len(seles_not_loaded) > 0:
-        #     for sele in seles_not_loaded:
-        #         print(sele + " loading...")
-        #         self._allocateTrajectory(sele)
 
         ffe = []
         ffs = []

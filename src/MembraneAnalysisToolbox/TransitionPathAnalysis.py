@@ -8,10 +8,29 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from scipy.optimize import least_squares
 
 class TransitionPathAnalysis:
+    """
+    A class for performing analysis on molecular dynamics simulation trajectories.
+
+    Parameters:
+        topology_file (str): The path to the topology file (.tpr) of the system.
+        trajectory_file (str): The path to the trajectory file (.xtc) of the system. Defaults to None.
+        verbose (bool, optional): Whether to print verbose output. Defaults to False.
+
+    Attributes:
+        topology_file (str): The path to the topology file (.tpr) of the system.
+        trajectory_file (str): The path to the trajectory file (.xtc) of the system.
+        verbose (bool): Whether to print verbose output.
+        u (mda.Universe): The MDAnalysis Universe object representing the system.
+        nth (int): The number of frames to analyze per timestep in order to get 5 frames per nanosecond.
+        timesteps (int): The number of analyzed timesteps.
+        trajectories (dict): A dictionary to store the trajectories of selectors (e.g. atoms of molecules or beads). A selector is used to select atoms from the universe using the MDA lingo.
+        timeline (np.ndarray): An array representing the timeline of the analyzed frames. Used for plotting purposes.
+
+    """
     def __init__(
             self, 
             topology_file: str, 
-            trajectory_file: str = None,
+            trajectory_file: str,
             verbose = False,
             ):
         
@@ -32,14 +51,17 @@ class TransitionPathAnalysis:
         self.nth = int(np.floor(1000/self.u.trajectory.dt/5))
         # Based on the nth, we calculate the number of analysed timesteps
         self.timesteps = int(np.ceil(self.u.trajectory.n_frames/self.nth))
+        # Print some information about the simulation
         if self.verbose:
-            print("Universe: " + str(self.u))
-            print("number of frames: " + str(self.u.trajectory.n_frames))
-            print("step size: " + str(self.u.trajectory.dt) + " ps")
-            print("simulation duration: " + str((self.u.trajectory.n_frames-1)*self.u.trajectory.dt/1000) + " ns")
-            print("every " + str(self.nth) + "th frame is stored")
-            print("number of analysed frames: " + str(self.timesteps))
-            print("step size in analysis: " + str(self.u.trajectory.dt*self.nth) + " ps")
+            print("Information about the simulation:")
+            print("\t- number of atoms: " + str(self.u.atoms.n_atoms))
+            print('\t- number of frames: ' + str(self.u.trajectory.n_frames))
+            print("\t- step size: " + str(self.u.trajectory.dt) + " ps")
+            print("\t- simulation duration: " + str((self.u.trajectory.n_frames-1)*self.u.trajectory.dt/1000) + " ns")
+            print("Information about the analysis:")
+            print("\t- every " + str(self.nth) + "th frame is stored")
+            print("\t- number of analysed frames: " + str(self.timesteps))
+            print("\t- step size in analysis: " + str(self.u.trajectory.dt*self.nth) + " ps\n")
 
         
         # Trajectories of possible atoms/selectors will be stored in a dictionary
@@ -51,33 +73,57 @@ class TransitionPathAnalysis:
         self.timeline = np.linspace(0, self.u.trajectory.n_frames*self.u.trajectory.dt, self.timesteps)
 
 
+    # def _allocateTrajectory(self, selector):
+    #     """
+    #     Save (allcate) the trajectories of the selectors to the dictionary.
 
+    #     Parameters:
+    #     selector (str): The selector used to select atoms from the universe by following MDA lingo.
 
-    def _allocateTrajectory(self, selector):
-        """
-        Save the trajectories of the selectors to the dictionary.
+    #     Returns:
+    #     None
 
-        Parameters:
-        selector (str): The selector used to select atoms from the universe.
+    #     This method allocates and saves the trajectories of the selected atoms to the dictionary.
+    #     It initializes an array to store the positions of the atoms over time and populates it
+    #     by iterating over the trajectory frames. The resulting positions array is then stored
+    #     in the `trajectories` dictionary under the given selector key.
+    #     """
+    #     # select atoms from the universe based on the selector
+    #     atoms = self.u.select_atoms(selector)
+    #     if self.verbose:
+    #         print(selector + " loading...")
+    #         print("number of " + selector + " atoms: " + str(atoms.n_atoms))
+    #     # initialize an array to store the positions of the atoms over time
+    #     positions = np.zeros((atoms.n_atoms, self.timesteps, 3))
+    #     # populate the positions array by iterating over every nth frame of the trajectory
+    #     for i, ts in enumerate(self.u.trajectory[::self.nth]):
+    #         positions[:,i,:] = atoms.positions
+    #     # store the positions array in the dictionary under the given selector key
+    #     self.trajectories[selector] = positions
+    #     if self.verbose:
+    #         print(selector + " loaded.")
 
-        Returns:
-        None
+    def _allocateTrajectories(self, selectors):
+        # check for the format of the selectors
+        if isinstance(selectors, str):
+            selectors = [selectors]
+        elif not isinstance(selectors, list):
+            raise ValueError("Selectors must be a string or a list of strings.")
+        
+        selectors_unstored = [selector for selector in selectors if selector not in self.trajectories]
+        atomslist = [self.u.select_atoms(selector) for selector in selectors_unstored]
+        positions =  np.zeros((sum([atoms.n_atoms for atoms in atomslist]), self.timesteps, 3))
+        indexes = [0]
+        for atoms in atomslist:
+            indexes.append(indexes[-1] + atoms.n_atoms)
+        for i, _ in enumerate(self.u.trajectory[::self.nth]):
+            for j, atoms in enumerate(atomslist):
+                positions[indexes[j]:indexes[j+1],i,:] = atoms.positions
+        for i, sele in enumerate(selectors_unstored):
+            self.trajectories[sele] = positions[indexes[i]:indexes[i+1],:,:]
 
-        This method allocates and saves the trajectories of the selected atoms to the dictionary.
-        It initializes an array to store the positions of the atoms over time and populates it
-        by iterating over the trajectory frames. The resulting positions array is then stored
-        in the `trajectories` dictionary under the given selector key.
-        """
-        atoms = self.u.select_atoms(selector)
-        if self.verbose:
-            print(selector + " loading...")
-            print("number of " + selector + " atoms: " + str(atoms.n_atoms))
-        positions = np.zeros((atoms.n_atoms, self.timesteps, 3))
-        for i, ts in enumerate(self.u.trajectory[::self.nth]):
-            positions[:,i,:] = atoms.positions
-        self.trajectories[selector] = positions
-        if self.verbose:
-            print(selector + " loaded.")
+    
+
     
     def inspect(self, selectors, z_lower=None, L=None):
         """
@@ -89,22 +135,33 @@ class TransitionPathAnalysis:
             L (float, optional): The length of the z-coordinate range to display on the histogram. Defaults to None.
 
         Returns:
-            None
+            tuple: A tuple containing the figures for the histograms of x, y and z coordinates.
+
+        Raises:
+            ValueError: If the selectors parameter is not a string or a list of strings.
+
         """
-        if type(selectors) is not list:
-            selectors = [selectors]
+        self._allocateTrajectories(selectors)
+        # # check for the format of the selectors
+        # if isinstance(selectors, str):
+        #     selectors = [selectors]
+        # elif not isinstance(selectors, list):
+        #     raise ValueError("Selectors must be a string or a list of strings.")
 
-        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
-        if len(seles_not_loaded) > 0:
-            for sele in seles_not_loaded:
-                self._allocateTrajectory(sele)
+        # # calculate the selectors that are not already loaded in the trajectories dictionary
+        # seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
+        # # if there are selectors that are not loaded, allocate them using the built in _allocateTrajectory method
+        # if len(seles_not_loaded) > 0:
+        #     for sele in seles_not_loaded:
+        #         self._allocateTrajectory(sele)
 
+        # calculate the total number of elements in the trajectories of the selectors to be able to allocate flat arrays for the histograms
         total_elements = sum(self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1] for sele in selectors)
         x = np.empty(total_elements)
         y = np.empty(total_elements)
         z = np.empty(total_elements)
-        index = 0
         # Collect data for each selector and store directly in the pre-allocated arrays
+        index = 0
         for sele in selectors:
             positions = self.trajectories[sele]
             n_elements = positions.shape[0] * positions.shape[1]
@@ -113,6 +170,7 @@ class TransitionPathAnalysis:
             z[index:index + n_elements] = positions[:, :, 2].flatten()
             index += n_elements
 
+        # Create histograms for the x, y, and z coordinates
         fig_z_dist, ax_z_dist = plt.subplots()
         fig_z_dist.suptitle("Histogram of z", fontsize="x-large")
         ax_z_dist.hist(z, bins=100, density=True, alpha=0.5, label=selectors)
@@ -137,34 +195,38 @@ class TransitionPathAnalysis:
         ax_y_dist.set_ylabel("Frequency", fontsize="x-large")
         ax_y_dist.legend()
 
-        plt.show()
-
-    def find_z_lower_hexstruc(self, mem_selector, L):
+    def find_z_lower_hexstruc(self, mem_selector: str, L):
         """
-        Find the z-coordinate of the lower boundary of the hexagonal structure
+        Find the z-coordinate of the lower boundary of the hexagonal structure.
+        This is done by calculating a histogram of the z-coordinates of the membrane selectors.
+        Then the max and min value of the histogram are used to calculate the middle value.
+        Then the lower boundary is calculated by subtracting half of the length of the hexagonal structure.
         
         Parameters:
-            mem_selector (str or list): The selector for the membrane trajectory.
+            mem_selector (str): The selector for the membrane trajectory.
                 If a list is provided, the first element will be used.
             L (float): The length of the hexagonal structure.
         
         Returns:
             float: The z-coordinate of the lower boundary of the hexagonal structure.
         """
-        if type(mem_selector) is list:
-            mem_selector = mem_selector[0]
-        
-        if mem_selector not in self.trajectories:
-            self._allocateTrajectory(mem_selector)
+        self._allocateTrajectories(mem_selector)
+        # # Check if the trajectory of the membrane selector is already loaded and if not, load it
+        # if mem_selector not in self.trajectories:
+        #     self._allocateTrajectory(mem_selector)
 
+        # Get the z-coordinates of the membrane trajectory
         z = self.trajectories[mem_selector][:, :, 2].flatten()
         
+        # Calculate the histogram of the z-coordinates
         _, bins = np.histogram(z, bins=100, density=True)
 
+        # Calculate the upper and lower bounds of the histogram and with that the middle value
         z_lower = bins[0]
         z_upper = bins[-1]
         z_middle = (z_lower + z_upper) / 2
-
+        
+        # Calculate the lower boundary of the hexagonal structure and return it
         return z_middle - L/2
 
 
@@ -181,14 +243,19 @@ class TransitionPathAnalysis:
             tuple: A tuple containing three arrays - concatenated first-first passage times (ffs),
                    concatenated first-final passage times (ffe), and concatenated indices (indizes).
         """
-        if type(selectors) is not list:
-            selectors = [selectors]
+        self._allocateTrajectories(selectors)
+        # # check for the format of the selectors
+        # if isinstance(selectors, str):
+        #     selectors = [selectors]
+        # elif not isinstance(selectors, list):
+        #     raise ValueError("Selectors must be a string or a list of strings.")
 
-        seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
-        if len(seles_not_loaded) > 0:
-            for sele in seles_not_loaded:
-                print(sele + " loading...")
-                self._allocateTrajectory(sele)
+        
+        # seles_not_loaded = [sele for sele in selectors if sele not in self.trajectories]
+        # if len(seles_not_loaded) > 0:
+        #     for sele in seles_not_loaded:
+        #         print(sele + " loading...")
+        #         self._allocateTrajectory(sele)
 
         ffe = []
         ffs = []

@@ -8,7 +8,7 @@ version = "2024.6.17"
 authors = [
   { name="Moritz Marquardt", email="moritz.g.marquardt@gmail.com" },
 ]
-description = "A python packages for analysing Membranes and Carbon Materials"
+description = "Toolbox for analysing simulation data of Membranes and Carbon Materials"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {file = "LICENCE"}

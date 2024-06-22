@@ -21,5 +21,4 @@ It also uses work by Gotthold Fläschner.
 
 1) Download or clone this repository
 2) run ```pip install [path to package]``` in your python environment
-(3) To install the package as editable for development purposes, run ```pip install -e [path to package]``` in your python environment (--deprecated)
-4) look at examples/ to see how the classes are imported and used
+3) look at examples/ to see how the classes are imported and used

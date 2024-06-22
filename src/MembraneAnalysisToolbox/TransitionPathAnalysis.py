@@ -226,7 +226,7 @@ class TransitionPathAnalysis:
         plt.ylabel("relative Häufigkeit")
 
 
-    def calc_diffusion(self, passage_times, L, T):
+    def calc_diffusion(self, passage_times, L):
         """
         Calculate the diffusion coefficient using the methods of Gotthold Fläschner.
 

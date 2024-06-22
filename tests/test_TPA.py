@@ -1,9 +1,10 @@
 import unittest
-# right now this is just so a test ist there as a framework, no actual test happening yet
+# right now this is just so a test is there as a framework, no actual test happening yet
 
 
 class TestTFM(unittest.TestCase):
     def test_upper(self):
+        # test if the test works with a simple sum
         sum = 3 + 3
         self.assertEqual(sum, 6)
 

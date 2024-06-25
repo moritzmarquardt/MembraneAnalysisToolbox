@@ -356,8 +356,12 @@ class TransitionPathAnalysis:
                 sys.stdout.write(f"\r\tProgress: {progress}%")
                 sys.stdout.flush()
             sample = self.trajectories[selector][:, sample_start_index:sample_start_index+bootstrap_sample_length, 2]
-            ffs, ffe, _ = tfm.dur_dist_improved(sample, [z_lower, z_lower+L])
-            bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
+            try:
+                ffs, ffe, _ = tfm.dur_dist_improved(sample, [z_lower, z_lower+L])
+                bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
+            except Exception as e:
+                print(e)
+                bootstrap_diffusions[i] = np.nan
             
         if self.verbose:
             print("\nBootstrapping finished.")

@@ -1,6 +1,7 @@
 import MDAnalysis as mda
 import matplotlib.pyplot as plt
 import os
+import sys
 import numpy as np
 import MembraneAnalysisToolbox.funcs as tfm
 import MembraneAnalysisToolbox.plot as tfmp
@@ -297,6 +298,32 @@ class TransitionPathAnalysis:
             ffs, ffe, indizes = tfm.dur_dist_improved(piece, [z_lower, z_lower+L])
             bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
         return bootstrap_diffusions
+    
+    def bootstrapping_diffusion(self, selector, bootstrap_sample_length_ns, n_bootstraps, z_lower, L, plot=True):
+        if not isinstance(selector, str):
+            raise ValueError("Selector must be a string.")
+        
+        self._allocateTrajectories(selector)
+
+        bootstrap_sample_length = bootstrap_sample_length_ns *1000 #convert to ps
+        bootstrap_sample_length /= self.u.trajectory.dt #convert to frames
+        bootstrap_sample_length /= self.nth #convert to steps in the analysis
+        bootstrap_sample_length = int(bootstrap_sample_length) #convert to int
+
+        bootstrap_diffusions = np.zeros(n_bootstraps)
+        rg = np.random.default_rng() #this is numpys new state of the art random number generator routine according to their docs
+        for i in range(n_bootstraps):
+            sample_start_index = rg.integers(0, self.timesteps - bootstrap_sample_length)
+            # print(i, sample_start_index)
+            progress = i/n_bootstraps*100
+            sys.stdout.write(f"\rProgress: {progress}%")
+            sys.stdout.flush()
+            sample = self.trajectories[selector][:, sample_start_index:sample_start_index+bootstrap_sample_length, 2]
+            ffs, ffe, _ = tfm.dur_dist_improved(sample, [z_lower, z_lower+L])
+            bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
+
+        return bootstrap_diffusions
+
     
     
 

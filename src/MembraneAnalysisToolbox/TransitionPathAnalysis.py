@@ -91,20 +91,24 @@ class TransitionPathAnalysis:
         
         selectors_unstored = [selector for selector in selectors if selector not in self.trajectories]
         if self.verbose:
-            print("Allocating trajectories for selectors: " + str(selectors_unstored.join(", ")))
+            print("Allocating trajectories for selectors: \"" + "\", \"".join(selectors_unstored) + "\".")
         atomslist = [self.u.select_atoms(selector) for selector in selectors_unstored]
         positions =  np.zeros((sum([atoms.n_atoms for atoms in atomslist]), self.timesteps, 3))
         indexes = [0]
         for atoms in atomslist:
             indexes.append(indexes[-1] + atoms.n_atoms)
         for i, _ in enumerate(self.u.trajectory[::self.nth]):
+            if self.verbose:
+                percentage = int((i+1)/self.timesteps*100)
+                sys.stdout.write(f"\r\tProgress: {percentage}%")
+                sys.stdout.flush()
             for j, atoms in enumerate(atomslist):
                 positions[indexes[j]:indexes[j+1],i,:] = atoms.positions
         for i, sele in enumerate(selectors_unstored):
             self.trajectories[sele] = positions[indexes[i]:indexes[i+1],:,:]
 
         if self.verbose:
-            print("Trajectories allocated.")
+            print("\nTrajectories allocated.")
 
     
     def inspect(self, selectors, z_lower=None, L=None):
@@ -320,7 +324,7 @@ class TransitionPathAnalysis:
         for i in range(n_bootstraps):
             sample_start_index = rg.integers(0, self.timesteps - bootstrap_sample_length)
             # print(i, sample_start_index)
-            progress = i/n_bootstraps*100
+            progress = int(i/n_bootstraps*100)
             sys.stdout.write(f"\rProgress: {progress}%")
             sys.stdout.flush()
             sample = self.trajectories[selector][:, sample_start_index:sample_start_index+bootstrap_sample_length, 2]

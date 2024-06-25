@@ -90,6 +90,8 @@ class TransitionPathAnalysis:
             raise ValueError("Selectors must be a string or a list of strings.")
         
         selectors_unstored = [selector for selector in selectors if selector not in self.trajectories]
+        if self.verbose:
+            print("Allocating trajectories for selectors: " + str(selectors_unstored.join(", ")))
         atomslist = [self.u.select_atoms(selector) for selector in selectors_unstored]
         positions =  np.zeros((sum([atoms.n_atoms for atoms in atomslist]), self.timesteps, 3))
         indexes = [0]
@@ -100,6 +102,9 @@ class TransitionPathAnalysis:
                 positions[indexes[j]:indexes[j+1],i,:] = atoms.positions
         for i, sele in enumerate(selectors_unstored):
             self.trajectories[sele] = positions[indexes[i]:indexes[i+1],:,:]
+
+        if self.verbose:
+            print("Trajectories allocated.")
 
     
     def inspect(self, selectors, z_lower=None, L=None):

@@ -226,7 +226,7 @@ class TransitionPathAnalysis:
         plt.ylabel("relative Häufigkeit")
 
 
-    def calc_diffusion(self, passage_times, L):
+    def calc_diffusion(self, passage_times, L, plot=True):
         """
         Calculate the diffusion coefficient using the methods of Gotthold Fläschner.
 
@@ -246,56 +246,59 @@ class TransitionPathAnalysis:
         """ FIT DATA """
         params_hom_cdf = self.fitting_hom_cdf_lsq(ecdf.x[1:],ecdf.y[1:], L)
 
-        """ PLOT DATA """
-        x_lim = centertime*4
-        x_cdf = np.linspace(0,x_lim*2,200)
-        y_hom_cdf = self.fitfunc_hom_cdf(x_cdf, params_hom_cdf[0], L)
-
-        fig, (ax1, ax2) = plt.subplots(2)
-        fig.suptitle('PDF and CDF fit')
-        ax2.scatter(ecdf.x, ecdf.y, color=[0,0.5,0.5])
-        ax2.plot(x_cdf[1:],y_hom_cdf[1:],label='hom', color='red', ls = 'dashed')
-        ax2.legend(loc='center right')
-        ax2.set_xlim(0,x_lim)
-
         D_hom_cdf=params_hom_cdf[0]
 
-        # plot PDF
+        if plot:
 
-        """ PREPARE DATA """
-        bins = int(10*np.max(passage_times)/centertime)
-        histo, edges = np.histogram(passage_times, bins, density=True);
-        center=edges-(edges[2]-edges[1]);
-        center=np.delete(center,0)
-        edges=np.delete(edges,0)
+            """ PLOT DATA """
+            x_lim = centertime*4
+            x_cdf = np.linspace(0,x_lim*2,200)
+            y_hom_cdf = self.fitfunc_hom_cdf(x_cdf, params_hom_cdf[0], L)
 
-        """ PLOT DATA """
-        x = x_cdf
-        y2 = self.fitfunc_hom(x,params_hom_cdf[0], L)
+            fig, (ax1, ax2) = plt.subplots(2)
+            fig.suptitle('PDF and CDF fit')
+            ax2.scatter(ecdf.x, ecdf.y, color=[0,0.5,0.5])
+            ax2.plot(x_cdf[1:],y_hom_cdf[1:],label='hom', color='red', ls = 'dashed')
+            ax2.legend(loc='center right')
+            ax2.set_xlim(0,x_lim)
 
-        ax1.hist(passage_times,bins=len(center), density=True, color=[0,0.5,0.5])
-        ax1.plot(x[1:],y2[1:],label='hom', color='red', ls='dashed')
-        ax1.set_xlim(0,x_lim)
-        ax1.set_ylim(0,1.2*np.max(histo[0:]))
-        ax1.legend(loc='center right')
+            # plot PDF
+
+            """ PREPARE DATA """
+            bins = int(10*np.max(passage_times)/centertime)
+            histo, edges = np.histogram(passage_times, bins, density=True);
+            center=edges-(edges[2]-edges[1]);
+            center=np.delete(center,0)
+            edges=np.delete(edges,0)
+
+            """ PLOT DATA """
+            x = x_cdf
+            y2 = self.fitfunc_hom(x,params_hom_cdf[0], L)
+
+            ax1.hist(passage_times,bins=len(center), density=True, color=[0,0.5,0.5])
+            ax1.plot(x[1:],y2[1:],label='hom', color='red', ls='dashed')
+            ax1.set_xlim(0,x_lim)
+            ax1.set_ylim(0,1.2*np.max(histo[0:]))
+            ax1.legend(loc='center right')
 
         return D_hom_cdf
     
-    def bootstrap_diffusion(self, selector, z_lower, L, n_bootstraps):
+    def bootstrap_diffusion(self, selector, z_lower, L, n_bootstraps, plot=True):
         #first do the bootstrapping for only one element
         if not isinstance(selector, str):
             raise ValueError("Selector must be a string.")
         
         self._allocateTrajectories(selector)
         bootstrap_pieces = np.array_split(self.trajectories[selector][:,:,2], n_bootstraps, axis=0) #idk if this works
-        print(bootstrap_pieces)
-        print(bootstrap_pieces[0].shape)
+        # print(bootstrap_pieces)
+        # print(bootstrap_pieces[0].shape)
         bootstrap_diffusions = np.zeros(n_bootstraps)
         for i, piece in enumerate(bootstrap_pieces):
             ffs, ffe, indizes = tfm.dur_dist_improved(piece, [z_lower, z_lower+L])
-            bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L)
+            bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
         return bootstrap_diffusions
-
+    
+    
 
         
     

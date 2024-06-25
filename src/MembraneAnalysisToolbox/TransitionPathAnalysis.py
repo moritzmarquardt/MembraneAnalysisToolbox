@@ -281,6 +281,24 @@ class TransitionPathAnalysis:
 
         return D_hom_cdf
     
+    def bootstrap_diffusion(self, selector, z_lower, L, n_bootstraps):
+        #first do the bootstrapping for only one element
+        if not isinstance(selector, str):
+            raise ValueError("Selector must be a string.")
+        
+        self._allocateTrajectories(selector)
+        bootstrap_pieces = np.array_split(self.trajectories[selector][:,:,2], n_bootstraps, axis=0) #idk if this works
+        print(bootstrap_pieces)
+        print(bootstrap_pieces[0].shape)
+        bootstrap_diffusions = np.zeros(n_bootstraps)
+        for i, piece in enumerate(bootstrap_pieces):
+            ffs, ffe, indizes = tfm.dur_dist_improved(piece, [z_lower, z_lower+L])
+            bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L)
+        return bootstrap_diffusions
+
+
+        
+    
 #########################################################################################
 # Funktionen aus Gottholds Skript #######################################################
     def hom_cdf(self,x,D,i,L):

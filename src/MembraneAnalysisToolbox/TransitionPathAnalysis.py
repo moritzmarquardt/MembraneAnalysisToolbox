@@ -32,7 +32,8 @@ class TransitionPathAnalysis:
             self, 
             topology_file: str, 
             trajectory_file: str,
-            verbose = False,
+            results_dir: str = None,
+            verbose: bool = True,
             ):
         
         self.topology_file = topology_file
@@ -72,6 +73,10 @@ class TransitionPathAnalysis:
         # Initialize timeline of the analysed frames
         # The timeline is mostly used for plotting purposes
         self.timeline = np.linspace(0, self.u.trajectory.n_frames*self.u.trajectory.dt, self.timesteps)
+        # Create a directory to store the results
+        self._pop_results_dir(results_dir)
+
+
 
     def _allocateTrajectories(self, selectors):
         """
@@ -109,6 +114,26 @@ class TransitionPathAnalysis:
 
         if self.verbose:
             print("\nTrajectories allocated.")
+
+    
+    def _pop_results_dir(self, results_dir=None):
+        # Create a directory to store the results if it is not given or already exists
+        if results_dir is not None:
+            if os.path.isdir(results_dir):
+                self.results_dir = results_dir
+            else:
+                raise NotADirectoryError("Results directory does not exist.")
+        else:
+            path_to_traj_file = os.path.dirname(self.trajectory_file)
+            self.results_dir = path_to_traj_file + "analysis/"
+            if not os.path.isdir(self.results_dir):
+                if self.verbose:
+                    print("Creating results directory: " + self.results_dir + ".")
+                os.makedirs(self.results_dir)
+        if self.verbose:
+            print("Results will be saved in: " + self.results_dir + ".")
+    
+    
 
     
     def inspect(self, selectors, z_lower=None, L=None):
@@ -322,7 +347,7 @@ class TransitionPathAnalysis:
         bootstrap_diffusions = np.zeros(n_bootstraps)
         rg = np.random.default_rng() #this is numpys new state of the art random number generator routine according to their docs
         if self.verbose:
-            print(f"Bootstrapping for {n_bootstraps} samples of length {bootstrap_sample_length} steps.")
+            print(f"Bootstrapping for {n_bootstraps} samples of length {bootstrap_sample_length} steps = {bootstrap_sample_length_ns}ns.")
         for i in range(n_bootstraps):
             sample_start_index = rg.integers(0, self.timesteps - bootstrap_sample_length)
             # print(i, sample_start_index)

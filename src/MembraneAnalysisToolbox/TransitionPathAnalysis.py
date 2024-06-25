@@ -321,15 +321,21 @@ class TransitionPathAnalysis:
 
         bootstrap_diffusions = np.zeros(n_bootstraps)
         rg = np.random.default_rng() #this is numpys new state of the art random number generator routine according to their docs
+        if self.verbose:
+            print(f"Bootstrapping for {n_bootstraps} samples of length {bootstrap_sample_length} steps.")
         for i in range(n_bootstraps):
             sample_start_index = rg.integers(0, self.timesteps - bootstrap_sample_length)
             # print(i, sample_start_index)
             progress = int(i/n_bootstraps*100)
-            sys.stdout.write(f"\rProgress: {progress}%")
-            sys.stdout.flush()
+            if self.verbose:
+                sys.stdout.write(f"\r\tProgress: {progress}%")
+                sys.stdout.flush()
             sample = self.trajectories[selector][:, sample_start_index:sample_start_index+bootstrap_sample_length, 2]
             ffs, ffe, _ = tfm.dur_dist_improved(sample, [z_lower, z_lower+L])
             bootstrap_diffusions[i] = self.calc_diffusion(ffe-ffs, L, plot=plot)
+            
+        if self.verbose:
+            print("\nBootstrapping finished.")
 
         return bootstrap_diffusions
 

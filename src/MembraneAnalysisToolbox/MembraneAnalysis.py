@@ -133,7 +133,7 @@ class MembraneAnalysis:
                 self._create_directory(results_dir)
                 return results_dir
         if self.verbose:
-            print("Results will be saved in: " + r + ".")
+            print("Results will be saved in: " + self.results_dir + ".")
 
     def _create_directory(self, results_dir):
         if self.verbose:

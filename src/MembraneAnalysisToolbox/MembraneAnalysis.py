@@ -69,6 +69,7 @@ class MembraneAnalysis:
         # that are actually needed will be loaded when accesing functions that
         # need them
         self.trajectories = {}
+        self.load_trajectories_if_possible()
 
         # Initialize timeline of the analysed frames
         # The timeline is mostly used for plotting purposes
@@ -180,17 +181,25 @@ class MembraneAnalysis:
         return fig_hist, ax_hist
 
     def save_fig_to_results(self, fig, name=None):
-        fig.savefig(self.results_dir + label + ".png")
+        fig.savefig(self.results_dir + name + ".png")
         if self.verbose:
-            print("Figure saved in: " + self.results_dir + fig.get_label() + ".png")
+            print("Figure saved in: " + self.results_dir + name + ".png")
 
     def save_trajectories(self):
-        with open(self.results_dir + "trajectories_dict.pickle", "wb") as f:
-            pickle.dump(self.trajectories, f)
+        np.savez_compressed(self.results_dir + "trajectories.npz", **self.trajectories)
+        if self.verbose:
+            print("Trajectories saved in: " + self.results_dir + "trajectories.npz")
 
-    def load_trajectories(self):
-        with open(self.results_dir + "trajectories_dict.pickle", "rb") as f:
-            self.trajectories = pickle.load(f)
+    def load_trajectories_if_possible(self):
+        if os.path.exists(self.results_dir + "trajectories.npz"):
+            if self.verbose:
+                print("Loading trajectories from file.")
+            self._load_trajectories()
+
+    def _load_trajectories(self):
+        with np.load(self.results_dir + "trajectories.npz") as data:
+            for key in data.keys():
+                self.trajectories[key] = data[key]
 
     def find_membrane_location_hexstructure(self, mem_selector: str, L):
         self._allocateTrajectories(mem_selector)

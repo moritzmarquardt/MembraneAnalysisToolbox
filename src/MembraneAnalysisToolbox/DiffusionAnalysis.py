@@ -183,7 +183,7 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         return fig
 
-    def bootstrap_diffusion(self, selector, z_lower, L, n_bootstraps, plot=True):
+    def bootstrap_diffusion(self, selector, n_bootstraps, plot=True):
         # first do the bootstrapping for only one element
         if not isinstance(selector, str):
             raise ValueError("Selector must be a string.")
@@ -196,8 +196,12 @@ class DiffusionAnalysis(MembraneAnalysis):
         # print(bootstrap_pieces[0].shape)
         bootstrap_diffusions = np.zeros(n_bootstraps)
         for i, piece in enumerate(bootstrap_pieces):
-            ffs, ffe, indizes = tfm.dur_dist_improved(piece, [z_lower, z_lower + L])
-            bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, L, plot=plot)
+            ffs, ffe, _ = tfm.dur_dist_improved(
+                piece, [self.z_lower, self.z_lower + self.L]
+            )
+            bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, self.L)
+            if plot:
+                self.plot_diffusion(ffe - ffs, bootstrap_diffusions[i])
         return bootstrap_diffusions
 
     def bootstrapping_diffusion(

@@ -1,8 +1,6 @@
-import os
 import sys
 
 import matplotlib.pyplot as plt
-import MDAnalysis as mda
 import numpy as np
 from scipy.optimize import least_squares
 from statsmodels.distributions.empirical_distribution import ECDF

@@ -1,4 +1,5 @@
 import os
+import pickle
 import sys
 
 import matplotlib.pyplot as plt
@@ -23,6 +24,8 @@ class MembraneAnalysis:
         results_dir: str = None,
         verbose: bool = True,
     ):
+        self.verbose = verbose
+
         if not (self._check_existence_and_format(topology_file, ".tpr")):
             raise FileNotFoundError(
                 "Topology file does not exist or has wrong file format:"
@@ -42,8 +45,6 @@ class MembraneAnalysis:
         self.analysed_max_step_size_ps = analysed_max_step_size_ps
 
         self.results_dir = self._pop_results_dir(results_dir)
-
-        self.verbose = verbose
 
         # Build Universe using the MDAnalysis library
         self.u = mda.Universe(topology_file, trajectory_file)
@@ -74,7 +75,8 @@ class MembraneAnalysis:
         total_simulation_time = self.step_size * self.n_frames
         self.timeline = np.linspace(0, total_simulation_time, self.n_frames)
 
-    def _check_existence_and_format(self, path, extension):
+    @staticmethod
+    def _check_existence_and_format(path, extension):
         return os.path.exists(path) and path.endswith(extension)
 
     def _allocateTrajectories(self, selectors):
@@ -115,7 +117,7 @@ class MembraneAnalysis:
     def _pop_results_dir(self, results_dir=None):
         # Create a directory to store the results if it is not given or
         # already exists
-        if results_dir is str:
+        if isinstance(results_dir, str):
             if os.path.isdir(results_dir):
                 return results_dir
             else:
@@ -130,14 +132,15 @@ class MembraneAnalysis:
                 self._create_directory(results_dir)
                 return results_dir
         if self.verbose:
-            print("Results will be saved in: " + results_dir + ".")
+            print("Results will be saved in: " + r + ".")
 
     def _create_directory(self, results_dir):
         if self.verbose:
             print("Creating results directory: " + results_dir + ".")
         os.makedirs(results_dir)
 
-    def _create_histogram(self, data, label=None, title="", xlabel=None, ylabel=None):
+    @staticmethod
+    def _create_histogram(data, label=None, title="", xlabel=None, ylabel=None):
         # this exists to make it easy to have all histos in the same style
         fig_hist, ax_hist = plt.subplots()
         fig_hist.suptitle(title, fontsize="x-large")
@@ -176,10 +179,18 @@ class MembraneAnalysis:
         )
         return fig_hist, ax_hist
 
-    def save_fig_to_results(self, fig):
-        fig.savefig(self.results_dir + fig.get_label() + ".png")
+    def save_fig_to_results(self, fig, name=None):
+        fig.savefig(self.results_dir + label + ".png")
         if self.verbose:
             print("Figure saved in: " + self.results_dir + fig.get_label() + ".png")
+
+    def save_trajectories(self):
+        with open(self.results_dir + "trajectories_dict.pickle", "wb") as f:
+            pickle.dump(self.trajectories, f)
+
+    def load_trajectories(self):
+        with open(self.results_dir + "trajectories_dict.pickle", "rb") as f:
+            self.trajectories = pickle.load(f)
 
     def find_membrane_location_hexstructure(self, mem_selector: str, L):
         self._allocateTrajectories(mem_selector)
@@ -197,3 +208,6 @@ class MembraneAnalysis:
 
         # Calculate the lower boundary of the hexagonal structure and return it
         return z_middle - L / 2
+
+    def __str__(self) -> str:
+        return f"MembraneAnalysis object with {self.n_frames} frames analysed."

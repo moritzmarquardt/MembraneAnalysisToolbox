@@ -197,6 +197,8 @@ class MembraneAnalysis:
             print("Figure saved in: " + self.results_dir + name + ".png")
 
     def save_trajectories_if_notthere(self):
+        if self.verbose:
+            print("Saving trajectories...")
         if not os.path.exists(self.trajectory_npz_file_path):
             self._save_trajectories()
 

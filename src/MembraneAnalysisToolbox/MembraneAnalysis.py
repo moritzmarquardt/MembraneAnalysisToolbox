@@ -44,17 +44,6 @@ class MembraneAnalysis:
         self.analysed_max_step_size_ps = analysed_max_step_size_ps
 
         self.results_dir = self._pop_results_dir(results_dir)
-        self.trajectory_npz_file_path = (
-            str(self.results_dir)
-            + "analysis_trajectories"
-            + "_nth"
-            + str(self.nth_frame)
-            + "_dt"
-            + str(self.step_size)
-            + "_nframes"
-            + str(self.n_frames)
-            + ".npz"
-        )
 
         # Build Universe using the MDAnalysis library
         self.u = mda.Universe(topology_file, trajectory_file)
@@ -73,6 +62,18 @@ class MembraneAnalysis:
 
         # Calculate the number of analysed frames
         self.n_frames = int(np.ceil(self.u.trajectory.n_frames / self.nth_frame))
+
+        self.trajectory_npz_file_path = (
+            str(self.results_dir)
+            + "analysis_trajectories"
+            + "_nth"
+            + str(self.nth_frame)
+            + "_dt"
+            + str(self.step_size)
+            + "_nframes"
+            + str(self.n_frames)
+            + ".npz"
+        )
 
         # Trajectories of possible atoms/selectors will be stored in a
         # dictionary for speed and efficiency only trajectories of selectors
@@ -205,13 +206,13 @@ class MembraneAnalysis:
             print("Trajectories saved in: " + self.trajectory_npz_file_path)
 
     def load_trajectories_if_possible(self):
-        if os.path.exists(self.results_dir + "trajectories.npz"):
+        if os.path.exists(self.trajectory_npz_file_path):
             if self.verbose:
-                print("Loading trajectories from file.")
+                print("Loading trajectories from file...")
             self._load_trajectories()
 
     def _load_trajectories(self):
-        with np.load(self.results_dir + "trajectories.npz") as data:
+        with np.load(self.trajectory_npz_file_path) as data:
             for key in data.keys():
                 self.trajectories[key] = data[key]
 

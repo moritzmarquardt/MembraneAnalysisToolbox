@@ -185,7 +185,11 @@ class MembraneAnalysis:
         if self.verbose:
             print("Figure saved in: " + self.results_dir + name + ".png")
 
-    def save_trajectories(self):
+    def save_trajectories_if_notthere(self):
+        if not os.path.exists(self.results_dir + "trajectories.npz"):
+            self._save_trajectories()
+
+    def _save_trajectories(self):
         np.savez_compressed(self.results_dir + "trajectories.npz", **self.trajectories)
         if self.verbose:
             print("Trajectories saved in: " + self.results_dir + "trajectories.npz")

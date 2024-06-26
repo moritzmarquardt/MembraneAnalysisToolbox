@@ -44,6 +44,17 @@ class MembraneAnalysis:
         self.analysed_max_step_size_ps = analysed_max_step_size_ps
 
         self.results_dir = self._pop_results_dir(results_dir)
+        self.trajectory_npz_file_path = (
+            str(self.results_dir)
+            + "analysis_trajectories"
+            + "_nth"
+            + str(self.nth_frame)
+            + "_dt"
+            + str(self.step_size)
+            + "_nframes"
+            + str(self.n_frames)
+            + ".npz"
+        )
 
         # Build Universe using the MDAnalysis library
         self.u = mda.Universe(topology_file, trajectory_file)
@@ -185,13 +196,13 @@ class MembraneAnalysis:
             print("Figure saved in: " + self.results_dir + name + ".png")
 
     def save_trajectories_if_notthere(self):
-        if not os.path.exists(self.results_dir + "trajectories.npz"):
+        if not os.path.exists(self.trajectory_npz_file_path):
             self._save_trajectories()
 
     def _save_trajectories(self):
-        np.savez_compressed(self.results_dir + "trajectories.npz", **self.trajectories)
+        np.savez_compressed(self.trajectory_npz_file_path, **self.trajectories)
         if self.verbose:
-            print("Trajectories saved in: " + self.results_dir + "trajectories.npz")
+            print("Trajectories saved in: " + self.trajectory_npz_file_path)
 
     def load_trajectories_if_possible(self):
         if os.path.exists(self.results_dir + "trajectories.npz"):

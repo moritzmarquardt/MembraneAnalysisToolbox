@@ -63,7 +63,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             f"  nth_frame: {self.nth_frame}\n"
             f"  n_frames: {self.n_frames}\n"
             f"  u: {self.u}\n"
-            f"  trajectories: {self.trajectories}"
+            f"  trajectories: {self.trajectories.keys()}\n"
         )
 
     def find_membrane_location_hexstructure(self, mem_selector: str):
@@ -158,6 +158,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         y_hom_cdf = self.fitfunc_hom_cdf(x_cdf, D, self.L)
 
         fig, (ax1, ax2) = plt.subplots(2)
+        print(fig)
         fig.suptitle("PDF and CDF fit")
         ax2.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5])
         ax2.plot(x_cdf[1:], y_hom_cdf[1:], label="hom", color="red", ls="dashed")
@@ -181,6 +182,8 @@ class DiffusionAnalysis(MembraneAnalysis):
         ax1.set_xlim(0, x_lim)
         ax1.set_ylim(0, 1.2 * np.max(histo[0:]))
         ax1.legend(loc="center right")
+
+        return fig
 
     def bootstrap_diffusion(self, selector, z_lower, L, n_bootstraps, plot=True):
         # first do the bootstrapping for only one element

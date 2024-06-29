@@ -99,46 +99,52 @@ class DiffusionAnalysis(MembraneAnalysis):
         self.passageTimes[selector] = ffe - ffs
 
     def plot_passagetimedist(self, selector: str):
+        if selector not in self.passageTimes.keys():
+            raise ValueError(
+                "Passage times for the selector must be calculated before plotting the distribution."
+            )
         plt.figure("Verteilung der Durchgangszeiten")
         passage_times = self.passageTimes[selector]
         tfmp.plot_dist(passage_times, max_range=np.max(passage_times) * 1.1)
         plt.xlabel("Durchgangszeiten")
         plt.ylabel("relative Häufigkeit")
 
-    def calc_diffusion(self, passage_times):
-        """
-        Calculate the diffusion coefficient using the methods of Gotthold Fläschner.
-
-        Args:
-            passage_times (array-like): Array of passage times.
-            L (float): Length parameter.
-            T (float): Temperature parameter.
-
-        Returns:
-            float: The diffusion coefficient.
-
-        """
+    def calc_diffusion(self, selector: str):
         if self.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
             )
+        if selector not in self.passageTimes.keys():
+            raise ValueError(
+                "Passage times for the selector must be calculated before calculating the diffusion coefficient."
+            )
 
+        passage_times = self.passageTimes[selector]
         ecdf = ECDF(passage_times)
-        idx = (np.abs(ecdf.y - 0.5)).argmin()
-        centertime = ecdf.x[idx]
 
-        """ FIT DATA """
+        # FIT DATA
         params_hom_cdf = self.fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], self.L)
 
         D_hom_cdf = params_hom_cdf[0]
 
-        return D_hom_cdf
+        self.D[selector] = D_hom_cdf
 
-    def plot_diffusion(self, passage_times, D):
+    def plot_diffusion(self, selector: str):
         if self.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
             )
+        if selector not in self.passageTimes.keys():
+            raise ValueError(
+                "Passage times for the selector must be calculated before plotting the diffusion coefficient."
+            )
+        if selector not in self.D.keys():
+            raise ValueError(
+                "Diffusion coefficient for the selector must be calculated before plotting the diffusion coefficient."
+            )
+
+        passage_times = self.passageTimes[selector]
+        D = self.D[selector]
 
         ecdf = ECDF(passage_times)
         idx = (np.abs(ecdf.y - 0.5)).argmin()

@@ -23,7 +23,7 @@ def calc_hor_dist(x_traj, y_traj, ffs, ffe):
     """
     # print("ooooooo")
     distances = []
-    for i in range(x_traj.shape[0]):  
+    for i in range(x_traj.shape[0]):
         # Shape[0] returns size of first dimension (number of trajs)
         X = x_traj[i, :]
         Y = y_traj[i, :]
@@ -168,9 +168,7 @@ def dur_dist_improved(S, bounds, p=1, p_middle=1):
 
     # TODO raise exeption if no passage has been detected for better understanding of errors
     if len(indizes) == 0:
-        raise Exception(
-                    "no transition detected. Check traj files and boundaries"
-                )
+        raise Exception("no transition detected. Check traj files and boundaries")
 
     # return the start and end times of all passages that meet the conditions
     # that are set by defining p and p_middle

@@ -202,26 +202,19 @@ def bin(A, lower_bound, upper_bound):
     return C
 
 
-def npy2txt_save(ff, path):
-    """convert ff array (all passage times) saved in a .npy file by the function save_results
-    to a txt file with all passage times as lines
-    dont forget to rename the text file with temperature, length and number
+def save_1darr_to_txt(arr: np.ndarray, path: str):
+    """
+    Save a NumPy array to a text file.
 
-    Args:
-        ff (_type_): numpy array
-        path (_type_): path to save destination
-        example: path = "./diffusion/solv-hex/tt-ns_solv-hex_L181_310K_N283.txt"
+    Parameters:
+    arr (numpy.ndarray): The array to be saved.
+    path (str): The path to the output text file including the extension .txt.
+
+    Returns:
+    None
     """
 
-    # print(ff)
-
-    n = ff.size
-    # only use every nth passage time, to get around 2000 passage times, more is not
-    # needed for diffusion fitting
-    nth = max(int(n / 2000), 1)
-
-    # save to txt at the given location
     with open(path, "w") as f:
-        for i in range(0, ff.size, nth):
+        for i in range(0, arr.size):
             f.write("\n")
-            f.write(str(ff[i]))
+            f.write(str(arr[i]))

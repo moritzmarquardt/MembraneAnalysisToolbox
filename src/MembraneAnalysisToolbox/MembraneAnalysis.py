@@ -80,7 +80,7 @@ class MembraneAnalysis:
         # that are actually needed will be loaded when accesing functions that
         # need them
         self.trajectories = {}
-        self.load_trajectories_if_possible()
+        # self.load_trajectories_if_possible()
 
         # Initialize timeline of the analysed frames
         # The timeline is mostly used for plotting purposes
@@ -208,6 +208,7 @@ class MembraneAnalysis:
             print("Trajectories saved in: " + self.trajectory_npz_file_path)
 
     def load_trajectories_if_possible(self):
+        # TODO add a check to see if the file is corrupted
         if os.path.exists(self.trajectory_npz_file_path):
             if self.verbose:
                 print("Loading trajectories from file...")

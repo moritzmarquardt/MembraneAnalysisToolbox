@@ -199,7 +199,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             ffs, ffe, _ = tfm.dur_dist_improved(
                 piece, [self.z_lower, self.z_lower + self.L]
             )
-            bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, self.L)
+            bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs)
             if plot:
                 self.plot_diffusion(ffe - ffs, bootstrap_diffusions[i])
         return bootstrap_diffusions

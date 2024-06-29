@@ -12,16 +12,6 @@ class EffectivePoreSizeAnalysis:
     """
     Class for analyzing effective pore size.
     Actually, the analysis is just a sequence of method calls. But here it is encapsulated in a class for clarity.
-
-    Attributes:
-    - topology_file (str): The path to the topology file: either .gro or .tpr.
-    - trajectory_file (str, optional): The path to the trajectory file: .xtc file. Defaults to None.
-    - membrane_resnames (list, optional): List of residue names for the membrane atoms. Defaults to None.
-    - solvent_resnames (list, optional): List of residue names for the solvent atoms. Defaults to None.
-    - y_min (float): Minimum value for the y-axis constraint.
-    - y_max (float): Maximum value for the y-axis constraint.
-    - z_min (float): Minimum value for the z-axis constraint.
-    - z_max (float): Maximum value for the z-axis constraint.
     """
 
     def __init__(
@@ -34,19 +24,6 @@ class EffectivePoreSizeAnalysis:
         y_range=None,
         verbose=False,
     ):
-        """
-        Initialize the EffectivePoreSizeAnalysis class.
-
-        Parameters:
-        - topology_file (str): The path to the topology file: either .gro or .tpr.
-        - trajectory_file (str, optional): The path to the trajectory file: .xtc file. Defaults to None.
-        - membrane_resnames (list, optional): List of residue names for the membrane atoms. Defaults to None.
-        - solvent_resnames (list, optional): List of residue names for the solvent atoms. Defaults to None.
-        - y_min (float): Minimum value for the y-axis constraint.
-        - y_max (float): Maximum value for the y-axis constraint.
-        - z_min (float): Minimum value for the z-axis constraint.
-        - z_max (float): Maximum value for the z-axis constraint.
-        """
 
         self.start = time.time()
 

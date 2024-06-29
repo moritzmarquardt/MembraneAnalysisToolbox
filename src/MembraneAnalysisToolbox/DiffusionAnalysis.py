@@ -98,11 +98,10 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         self.passageTimes[selector] = ffe - ffs
 
-    def plot_passagetimedist(self, passage_times):
+    def plot_passagetimedist(self, selector: str):
         plt.figure("Verteilung der Durchgangszeiten")
-        tfmp.plot_dist(
-            passage_times, number_of_bins=10, max_range=np.max(passage_times)
-        )
+        passage_times = self.passageTimes[selector]
+        tfmp.plot_dist(passage_times, max_range=np.max(passage_times) * 1.1)
         plt.xlabel("Durchgangszeiten")
         plt.ylabel("relative Häufigkeit")
 

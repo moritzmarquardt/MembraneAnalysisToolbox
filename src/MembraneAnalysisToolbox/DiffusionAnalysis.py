@@ -93,11 +93,10 @@ class DiffusionAnalysis(MembraneAnalysis):
             raise ValueError("L must be set before calculating passage times.")
 
         z = self.trajectories[selector][:, :, 2]
-        ffs, ffe, _ = tfm.dur_dist_improved(z, [self.z_lower, self.z_lower + self.L])
+        z_boundaries = [self.z_lower, self.z_lower + self.L]
+        ffs, ffe, _ = tfm.dur_dist_improved(z, z_boundaries)
 
-        self.passageTimes
-
-        return np.concatenate(ffs), np.concatenate(ffe)
+        self.passageTimes[selector] = ffe - ffs
 
     def plot_passagetimedist(self, passage_times):
         plt.figure("Verteilung der Durchgangszeiten")

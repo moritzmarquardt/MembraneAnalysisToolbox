@@ -45,7 +45,8 @@ class DiffusionAnalysis(MembraneAnalysis):
         )
         self.L = L
         self.z_lower = z_lower
-        self.D = D
+        self.passageTimes = {}
+        self.D = {}
 
     def __str__(self):
         return (
@@ -68,12 +69,12 @@ class DiffusionAnalysis(MembraneAnalysis):
         z_lower = super().find_membrane_location_hexstructure(mem_selector, self.L)
         self.z_lower = z_lower
 
-    def calc_passagetimes(self, selectors) -> tuple:
+    def calc_passagetimes(self, selector: str):
         """
         Calculates the passage times for the given selectors.
 
         Args:
-            selectors (list or str): The selectors to calculate passage times for.
+            selectors (str): The selectors to calculate passage times for.
             z_lower (float): The lower bound of the z-coordinate range.
             L (float): The length of the z-coordinate range.
 
@@ -81,7 +82,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             tuple: A tuple containing three arrays - concatenated first-first passage times (ffs),
                    concatenated first-final passage times (ffe), and concatenated indices (indizes).
         """
-        self._allocateTrajectories(selectors)
+        self._allocateTrajectories(selector)
 
         if self.z_lower is None:
             raise ValueError(
@@ -91,15 +92,10 @@ class DiffusionAnalysis(MembraneAnalysis):
         if self.L is None:
             raise ValueError("L must be set before calculating passage times.")
 
-        ffe = []
-        ffs = []
-        for sele in selectors:
-            z = self.trajectories[sele][:, :, 2]
-            ffs_sele, ffe_sele, _ = tfm.dur_dist_improved(
-                z, [self.z_lower, self.z_lower + self.L]
-            )
-            ffs.append(ffs_sele)
-            ffe.append(ffe_sele)
+        z = self.trajectories[selector][:, :, 2]
+        ffs, ffe, _ = tfm.dur_dist_improved(z, [self.z_lower, self.z_lower + self.L])
+
+        self.passageTimes
 
         return np.concatenate(ffs), np.concatenate(ffe)
 

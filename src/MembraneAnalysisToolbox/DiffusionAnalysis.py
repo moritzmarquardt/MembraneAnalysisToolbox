@@ -1,3 +1,4 @@
+import json
 import sys
 
 import matplotlib.pyplot as plt
@@ -46,6 +47,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         self.L = L
         self.z_lower = z_lower
         self.passageTimes = {}
+        self.n_passages = {}
         self.D = {}
 
     def __str__(self):
@@ -97,6 +99,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         ffs, ffe, _ = tfm.dur_dist_improved(z, z_boundaries)
 
         self.passageTimes[selector] = ffe - ffs
+        self.n_passages[selector] = len(ffs)
 
     def plot_passagetimedist(self, selector: str):
         if selector not in self.passageTimes.keys():
@@ -248,6 +251,23 @@ class DiffusionAnalysis(MembraneAnalysis):
             print("\nBootstrapping finished.")
 
         return bootstrap_diffusions
+
+    def store_results_json(self):
+        out = {
+            "L": self.L,
+            "z_lower": self.z_lower,
+            "D": self.D,
+            "n_passages": self.n_passages,
+        }
+        print(out)
+        self._store_dict_as_json(
+            out, self.results_dir + "diffusion_analysis_results.json"
+        )
+
+    @staticmethod
+    def _store_dict_as_json(dictionary, filename):
+        with open(filename, "w") as f:
+            json.dump(dictionary, f)
 
     #########################################################################################
     # Funktionen aus Gottholds Skript #######################################################

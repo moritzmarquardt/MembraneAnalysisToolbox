@@ -53,8 +53,8 @@ class MembraneAnalysis:
         if self.analysed_max_step_size_ps is None:
             self.nth_frame = 1
         else:
-            self.nth_frame = int(
-                np.floor(self.analysed_max_step_size_ps / self.u.trajectory.dt)
+            self.nth_frame = max(
+                1, int(np.floor(self.analysed_max_step_size_ps / self.u.trajectory.dt))
             )
 
         # the step size of the analysis in ps

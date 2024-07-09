@@ -253,8 +253,8 @@ class MembraneAnalysis:
         fig_hist, ax_hist = self._create_histogram(
             data=x,
             label=selectors,
-            title="Histogram of x",
-            xlabel="x",
+            title="Histogram of axis" + str(axis),
+            xlabel="axis" + str(axis) + " [Angstrom]",
             ylabel="Frequency",
         )
         ax_hist.legend()

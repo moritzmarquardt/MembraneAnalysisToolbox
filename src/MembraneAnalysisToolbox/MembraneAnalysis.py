@@ -7,25 +7,71 @@ import numpy as np
 
 
 class MembraneAnalysis:
-    """
-    This is a parent class for basic membrane analysis.
-    Idea is that this is a base class for the development of different
-    membrane analysis routines. Like analysing the diffusion or the
-    eff. pore size.
+    """Parent Class for core functionability of a membrane analysis.
 
+    This is a base class for the development of different membrane analysis routines.
+    For example analysing the diffusion or the eff. pore size.
+    An analysis needs a traj and topol file of the simulation and a folder where to save the results.
+
+    This class main functionality is the allocation of trajectories using MDAnalysis.
+    Additionally it offeres functionability to only allocate every nth frame for efficiency.
+
+
+    Parameters:
+        topology_file (str): The path to the topology file (.tpr) for the simulation.
+        trajectory_file (str): The path to the trajectory file (.xtc) for the simulation.
+        results_dir (str): The directory to store the analysis results.
+        analysis_max_step_size_ps (int, optional):
+            The maximum step size in picoseconds for analysis. Defaults to None.
+            If it is bigger than the step size of the simulation, only every nth frame is analysed to match the max step size.
+            If it is smaller than the simulation step size, the simulation step size will be analysed.
+        verbose (bool, optional): Whether to print verbose output. Defaults to True.
+
+    Methods:
+        _validate_file_extension(path: str, extension: str) -> bool:
+            This is used to check if a file exists and has the correct file extension.
+
+        _allocateTrajectories(selectors):
+            Used to allocate the trajectories of the selectors.
+
+        _validate_selectors(selectors) -> list:
+            Check if the selectors are a list and if not make them a list.
+
+        _validate_and_create_results_dir(results_dir: str):
+            This is used to create a directory to store the results if it does not exist yet.
+
+        create_hist_for_axis(selectors, axis: int) -> tuple:
+            Create a histogram to show the distribution of the atoms along an axis.
+
+        _create_histogram(data, label=None, bins=100, title="", xlabel="", ylabel="") -> tuple:
+            Create a simple histogram.
+
+        save_fig_to_results(fig, name: str):
+            Save a figure to the results directory.
+
+        find_membrane_location_hexstructure(mem_selector: str, L: float) -> float:
+            Find the lower boundary of the membrane in a hexagonal structure.
+
+        __str__() -> str:
+            Return a string representation of the object.
+
+    Raises:
+        FileNotFoundError: If the topology or trajectory file does not exist or has the wrong file format.
+        ValueError: If the selectors are not of the correct format.
     """
 
     def __init__(
         self,
         topology_file: str,
         trajectory_file: str,
-        analysed_max_step_size_ps: int = None,
-        results_dir: str = None,
+        results_dir: str,
+        analysis_max_step_size_ps: int = None,
         verbose: bool = True,
     ):
         self.verbose = verbose
 
-        if not (self._check_existence_and_format(topology_file, ".tpr")):
+        # 1: Check if the topology and trajectory files exist and have the correct file format
+        if not (self._validate_file_extension(topology_file, ".tpr")):
             raise FileNotFoundError(
                 "Topology file does not exist or has wrong file format:"
                 " A .tpr file is required."
@@ -33,7 +79,7 @@ class MembraneAnalysis:
         else:
             self.topology_file = topology_file
 
-        if not (self._check_existence_and_format(trajectory_file, ".xtc")):
+        if not (self._validate_file_extension(trajectory_file, ".xtc")):
             raise FileNotFoundError(
                 "Trajectory file does not exist or has wrong file format:"
                 " A .xtc file is required."
@@ -41,20 +87,23 @@ class MembraneAnalysis:
         else:
             self.trajectory_file = trajectory_file
 
-        self.analysed_max_step_size_ps = analysed_max_step_size_ps
+        # 2: Check if the results directory exists and create it if it does not
+        self._validate_and_create_results_dir(results_dir)
+        self.results_dir = results_dir
+        if self.verbose:
+            print("Results will be saved in: " + self.results_dir + ".")
 
-        self.results_dir = self._pop_results_dir(results_dir)
+        self.analysis_max_step_size_ps = analysis_max_step_size_ps
 
-        # Build Universe using the MDAnalysis library
+        # 3: Build Universe using the MDAnalysis library
         self.u = mda.Universe(topology_file, trajectory_file)
 
-        # Define how many (nth) frames are being analysed to reduce the amount
-        # of data
-        if self.analysed_max_step_size_ps is None:
+        # 4: Define how many (nth) frames are being analysed to reduce the amount of data
+        if self.analysis_max_step_size_ps is None:
             self.nth_frame = 1
         else:
             self.nth_frame = max(
-                1, int(np.floor(self.analysed_max_step_size_ps / self.u.trajectory.dt))
+                1, int(np.floor(self.analysis_max_step_size_ps / self.u.trajectory.dt))
             )
 
         # the step size of the analysis in ps
@@ -63,24 +112,11 @@ class MembraneAnalysis:
         # Calculate the number of analysed frames
         self.n_frames = int(np.ceil(self.u.trajectory.n_frames / self.nth_frame))
 
-        self.trajectory_npz_file_path = (
-            str(self.results_dir)
-            + "analysis_trajectories"
-            + "_nth"
-            + str(self.nth_frame)
-            + "_dt"
-            + str(self.step_size)
-            + "_nframes"
-            + str(self.n_frames)
-            + ".npz"
-        )
-
         # Trajectories of possible atoms/selectors will be stored in a
         # dictionary for speed and efficiency only trajectories of selectors
         # that are actually needed will be loaded when accesing functions that
         # need them
         self.trajectories = {}
-        # self.load_trajectories_if_possible()
 
         # Initialize timeline of the analysed frames
         # The timeline is mostly used for plotting purposes
@@ -88,15 +124,36 @@ class MembraneAnalysis:
         self.timeline = np.linspace(0, total_simulation_time, self.n_frames)
 
     @staticmethod
-    def _check_existence_and_format(path, extension):
+    def _validate_file_extension(path: str, extension: str) -> bool:
+        """This is used to check if a file exists and has the correct file extension.
+
+        Args:
+            path (str): The path to the file.
+            extension (str): The correct file extension.
+
+        Returns:
+            bool: True if the file exists and has the correct file extension, False otherwise.
+        """
         return os.path.exists(path) and path.endswith(extension)
 
     def _allocateTrajectories(self, selectors):
-        # check for the format of the selectors
-        if isinstance(selectors, str):
-            selectors = [selectors]
-        if not (isinstance(selectors, list) or isinstance(selectors, str)):
-            raise ValueError("Selectors must be a string or list of strings.")
+        """Used to allocate the trajectories of the selectors.
+
+        The selectors define the atoms of the MDAnalysis Universe that have to be allocated.
+        The trajectories of these atoms are stored in a dictionary for speed and efficiency.
+        Only every self.nth frame is stored to reduce the amount of data.
+
+        Args:
+            selectors (str or list): The selectors to allocate the trajectories for.
+
+        Raises:
+            ValueError: If the selectors are not of the correct format.
+
+        Returns:
+            None
+
+        """
+        selectors = self._validate_selectors(selectors)
 
         sels_unstored = [s for s in selectors if s not in self.trajectories]
         if len(sels_unstored) > 0:
@@ -126,49 +183,60 @@ class MembraneAnalysis:
             if self.verbose:
                 print("\nTrajectories allocated.")
 
-    def _pop_results_dir(self, results_dir=None):
-        # Create a directory to store the results if it is not given or
-        # already exists
-        if isinstance(results_dir, str):
-            if os.path.isdir(results_dir):
-                return results_dir
-            else:
-                self._create_directory(results_dir)
-                return results_dir
-        elif results_dir is None:
-            path = os.path.dirname(self.trajectory_file) + "/"
-            results_dir = path + "analysis/"
-            if os.path.isdir(results_dir):
-                return results_dir
-            else:
-                self._create_directory(results_dir)
-                return results_dir
-        if self.verbose:
-            print("Results will be saved in: " + self.results_dir + ".")
-
-    def _create_directory(self, results_dir):
-        if self.verbose:
-            print("Creating results directory: " + results_dir + ".")
-        os.makedirs(results_dir)
-
     @staticmethod
-    def _create_histogram(data, label=None, title="", xlabel=None, ylabel=None):
-        # this exists to make it easy to have all histos in the same style
-        fig_hist, ax_hist = plt.subplots()
-        fig_hist.suptitle(title, fontsize="x-large")
-        if label is not None:
-            ax_hist.hist(data, bins=100, density=True, alpha=0.5, label=label)
-        else:
-            ax_hist.hist(data, bins=100, density=True, alpha=0.5)
-        if xlabel is not None:
-            ax_hist.set_xlabel(xlabel, fontsize="x-large")
-        if ylabel is not None:
-            ax_hist.set_ylabel(ylabel, fontsize="x-large")
-        ax_hist.legend()
+    def _validate_selectors(selectors) -> list:
+        """
+        Check if the selectors are a list and if not make them a list.
 
-        return fig_hist, ax_hist
+        Args:
+            selectors (str or list): The selectors to validate.
 
-    def create_hist_for_axis(self, selectors: list, axis: int):
+        Returns:
+            list: The selectors as a
+        """
+        if isinstance(selectors, str):
+            selectors = [selectors]
+        if not (isinstance(selectors, list) or isinstance(selectors, str)):
+            raise ValueError("Selectors must be a string or list of strings.")
+        return selectors
+
+    def _validate_and_create_results_dir(self, results_dir: str):
+        """
+        This is used to create a directory to store the results if it does not exist yet.
+
+        Args:
+            results_dir (str): The directory to store the results.
+
+        Raises:
+            Exception: If the results directory does not end with a '/'.
+        """
+        if not results_dir.endswith("/"):
+            raise Exception(
+                f"The results directory: {results_dir} must end with a '/'."
+            )
+
+        # Warn if the results directory is not in the same directory as the trajectory file
+        if not os.path.dirname(self.trajectory_file) in os.path.dirname(results_dir):
+            print(
+                "Warning: The results directory is not in the same directory as the trajectory file."
+            )
+
+        if not os.path.isdir(results_dir):
+            if self.verbose:
+                print("Creating results directory: " + results_dir + ".")
+            os.makedirs(results_dir)
+
+    def create_hist_for_axis(self, selectors, axis: int) -> tuple:
+        """Create a histogram to show the distribution of the atoms along an axis.
+
+        This can be used to see the distribution of the atoms along the x, y, or z-axis.
+
+        Args:
+            selectors (list): The selectors to allocate the trajectories for.
+            axis (int): The axis to create the histogram for (0=x, 1=y, 2=z).
+
+        """
+        selectors = self._validate_selectors(selectors)
         self._allocateTrajectories(selectors)
         total_elements = sum(
             self.trajectories[sele].shape[0] * self.trajectories[sele].shape[1]
@@ -189,37 +257,66 @@ class MembraneAnalysis:
             xlabel="x",
             ylabel="Frequency",
         )
+        ax_hist.legend()
         return fig_hist, ax_hist
 
-    def save_fig_to_results(self, fig, name=None):
+    @staticmethod
+    def _create_histogram(
+        data, label=None, bins=100, title="", xlabel="", ylabel=""
+    ) -> tuple:
+        """Create a simple histogram.
+
+        This exists to make it easy to have all histos in the same style
+
+        Args:
+            data (array): The data to create the histogram for.
+            label (str, optional): The label for the histogram. Defaults to None.
+            bins (int, optional): The number of bins for the histogram. Defaults to 100.
+            title (str, optional): The title of the histogram. Defaults to "".
+            xlabel (str, optional): The x-axis label of the histogram. Defaults to "".
+            ylabel (str, optional): The y-axis label of the histogram. Defaults to "".
+
+        Returns:
+            tuple: The figure and axis of the histogram.
+        """
+        fig_hist, ax_hist = plt.subplots()
+        fig_hist.suptitle(title, fontsize="x-large")
+        if label is not None:
+            ax_hist.hist(data, bins=bins, density=True, alpha=0.5, label=label)
+        else:
+            ax_hist.hist(data, bins=bins, density=True, alpha=0.5)
+        if xlabel is not None:
+            ax_hist.set_xlabel(xlabel, fontsize="x-large")
+        if ylabel is not None:
+            ax_hist.set_ylabel(ylabel, fontsize="x-large")
+        ax_hist.legend()
+
+        return fig_hist, ax_hist
+
+    def save_fig_to_results(self, fig, name: str):
+        """Save a figure to the results directory.
+
+        Args:
+            fig (matplotlib.figure.Figure): The figure to save.
+            name (str): The name of the figure.
+
+        """
         fig.savefig(self.results_dir + name + ".png")
         if self.verbose:
             print("Figure saved in: " + self.results_dir + name + ".png")
 
-    def save_trajectories_if_notthere(self):
-        if self.verbose:
-            print("Saving trajectories...")
-        if not os.path.exists(self.trajectory_npz_file_path):
-            self._save_trajectories()
+    # TODO: instead of binning use CDF
+    def find_membrane_location_hexstructure(self, mem_selector: str, L: float) -> float:
+        """
+        Find the lower boundary of the membrane in a hexagonal structure.
 
-    def _save_trajectories(self):
-        np.savez_compressed(self.trajectory_npz_file_path, **self.trajectories)
-        if self.verbose:
-            print("Trajectories saved in: " + self.trajectory_npz_file_path)
+        Args:
+            mem_selector (str): The selector for the membrane atoms.
+            L (float): The length of the hexagonal structure.
 
-    def load_trajectories_if_possible(self):
-        # TODO add a check to see if the file is corrupted
-        if os.path.exists(self.trajectory_npz_file_path):
-            if self.verbose:
-                print("Loading trajectories from file...")
-            self._load_trajectories()
-
-    def _load_trajectories(self):
-        with np.load(self.trajectory_npz_file_path) as data:
-            for key in data.keys():
-                self.trajectories[key] = data[key]
-
-    def find_membrane_location_hexstructure(self, mem_selector: str, L):
+        Returns:
+            float: The lower boundary of the membrane in the hexagonal structure.
+        """
         self._allocateTrajectories(mem_selector)
 
         # Get the z-coordinates of the membrane trajectory

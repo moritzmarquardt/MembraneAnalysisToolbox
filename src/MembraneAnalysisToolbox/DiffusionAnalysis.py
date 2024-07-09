@@ -6,7 +6,7 @@ import numpy as np
 from scipy.optimize import least_squares
 from statsmodels.distributions.empirical_distribution import ECDF
 
-from MembraneAnalysisToolbox.core_functions import dur_dist_improved
+from MembraneAnalysisToolbox.core_functions import dur_dist_improved, save_1darr_to_txt
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis
 
 
@@ -290,6 +290,14 @@ class DiffusionAnalysis(MembraneAnalysis):
             out, self.results_dir + "diffusion_analysis_results.json"
         )
 
+    def save_passage_times_in_ns_to_txt(self, selector: str, file_name: str):
+        if not file_name.endswith(".txt"):
+            raise ValueError("File name must end with .txt.")
+        save_1darr_to_txt(
+            self.passageTimes[selector] / 1000,  # convert to ns
+            self.results_dir + file_name,
+        )
+
     @staticmethod
     def _store_dict_as_json(dictionary, filename):
         with open(filename, "w") as f:
@@ -389,6 +397,5 @@ class DiffusionAnalysis(MembraneAnalysis):
         t = (L) ** 2 / (i**2 * np.pi**2 * D)
         return (-1) ** (i - 1) * i**2 * np.exp(-x / t)
 
-
-# Ende Funktionen aus Gottholds Skript ##################################################
-#########################################################################################
+    # Ende Funktionen aus Gottholds Skript ##################################################
+    #########################################################################################

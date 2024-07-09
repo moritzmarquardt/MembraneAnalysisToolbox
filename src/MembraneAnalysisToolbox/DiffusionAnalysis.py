@@ -6,8 +6,7 @@ import numpy as np
 from scipy.optimize import least_squares
 from statsmodels.distributions.empirical_distribution import ECDF
 
-import MembraneAnalysisToolbox.funcs as tfm
-import MembraneAnalysisToolbox.plot as tfmp
+from MembraneAnalysisToolbox.core_functions import dur_dist_improved
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis
 
 
@@ -24,13 +23,16 @@ class DiffusionAnalysis(MembraneAnalysis):
         - the diffusion coefficient of the solvent molecules in the membrane
     These properties are stored in the class object and can be saved in a
     results directory.
+
+    length is always in Angstrom
+    time is always in ps (exept in the diff calculation) This choice is done because MDA works with ps
     """
 
     def __init__(
         self,
         topology_file: str,
         trajectory_file: str,
-        analysed_max_step_size_ps: int = None,
+        analysis_max_step_size_ps: int = None,
         results_dir: str = None,
         verbose: bool = True,
         L: float = None,
@@ -40,15 +42,23 @@ class DiffusionAnalysis(MembraneAnalysis):
         super().__init__(
             topology_file=topology_file,
             trajectory_file=trajectory_file,
-            analysed_max_step_size_ps=analysed_max_step_size_ps,
+            analysis_max_step_size_ps=analysis_max_step_size_ps,
             results_dir=results_dir,
             verbose=verbose,
         )
         self.L = L
         self.z_lower = z_lower
         self.passageTimes = {}
+        self.passageStarts = {}
         self.n_passages = {}
         self.D = {}
+
+        u_sim_time = self.u.trajectory.n_frames * self.u.trajectory.dt
+        ana_sim_time = self.n_frames * self.step_size
+        if abs(u_sim_time - ana_sim_time) > self.analysis_max_step_size_ps:
+            Exception(
+                f"Simulation time of trajectory ({u_sim_time}) and analysed time ({ana_sim_time}) do not match."
+            )
 
     def __str__(self):
         return (
@@ -56,33 +66,41 @@ class DiffusionAnalysis(MembraneAnalysis):
             f"  L: {self.L}\n"
             f"  z_lower: {self.z_lower}\n"
             f"  D: {self.D}\n"
+            f"  passageTimes: {self.passageTimes}\n"
+            f"  passageStarts: {self.passageStarts}\n"
+            f"  n_passages: {self.n_passages}\n"
             f"  results_dir: {self.results_dir}\n"
             f"  topology_file: {self.topology_file}\n"
             f"  trajectory_file: {self.trajectory_file}\n"
             f"  verbose: {self.verbose}\n"
-            f"  analysed_max_step_size_ps: {self.analysed_max_step_size_ps}\n"
+            f"  analysis_max_step_size_ps: {self.analysis_max_step_size_ps}\n"
+            f"  actual analysed step_size: {self.step_size}\n"
             f"  nth_frame: {self.nth_frame}\n"
-            f"  n_frames: {self.n_frames}\n"
+            f"  n_frames analysed: {self.n_frames}\n"
             f"  u: {self.u}\n"
             f"  trajectories: {self.trajectories.keys()}\n"
         )
 
     def find_membrane_location_hexstructure(self, mem_selector: str):
-        z_lower = super().find_membrane_location_hexstructure(mem_selector, self.L)
-        self.z_lower = z_lower
+        self.z_lower = super().find_membrane_location_hexstructure(mem_selector, self.L)
+
+    def verify_membrane_location(self, mem_selector: str):
+        fig_hist, ax_hist = self.create_hist_for_axis(mem_selector, 2)
+        ax_hist.axvline(self.z_lower, color="r", linestyle="--", label="z_lower")
+        ax_hist.axvline(
+            self.z_lower + self.L, color="g", linestyle="--", label="z_upper"
+        )
+        ax_hist.legend()
+        self.save_fig_to_results(fig=fig_hist, name="x_hist_hex_borders")
 
     def calc_passagetimes(self, selector: str):
         """
         Calculates the passage times for the given selectors.
+        store it in ns in self.passageTimes[selector]
 
         Args:
             selectors (str): The selectors to calculate passage times for.
-            z_lower (float): The lower bound of the z-coordinate range.
-            L (float): The length of the z-coordinate range.
 
-        Returns:
-            tuple: A tuple containing three arrays - concatenated first-first passage times (ffs),
-                   concatenated first-final passage times (ffe), and concatenated indices (indizes).
         """
         self._allocateTrajectories(selector)
 
@@ -96,11 +114,20 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         z = self.trajectories[selector][:, :, 2]
         z_boundaries = [self.z_lower, self.z_lower + self.L]
-        ffs, ffe, _ = tfm.dur_dist_improved(z, z_boundaries)
+        ffs, ffe, _ = dur_dist_improved(
+            z, z_boundaries
+        )  # only calcs the timesteps, not the time
 
-        self.passageTimes[selector] = ffe - ffs
-        self.n_passages[selector] = len(ffs)
+        # cast to int to get rid of the decimal places because they dont make it more accurate anyways
+        # the max accuracy are the timesteps
+        ffs_ns = ffs * self.u.trajectory.dt * self.nth_frame
+        ffe_ns = ffe * self.u.trajectory.dt * self.nth_frame
 
+        self.passageTimes[selector] = ffe_ns - ffs_ns
+        self.passageStarts[selector] = ffs_ns
+        self.n_passages[selector] = len(ffs_ns)
+
+    # TODO correct implementation of this function
     def plot_passagetimedist(self, selector: str):
         if selector not in self.passageTimes.keys():
             raise ValueError(
@@ -108,7 +135,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             )
         plt.figure("Verteilung der Durchgangszeiten")
         passage_times = self.passageTimes[selector]
-        tfmp.plot_dist(passage_times, max_range=np.max(passage_times) * 1.1)
+        self.plot_dist(passage_times, max_range=np.max(passage_times) * 1.1)
         plt.xlabel("Durchgangszeiten")
         plt.ylabel("relative Häufigkeit")
 
@@ -122,7 +149,7 @@ class DiffusionAnalysis(MembraneAnalysis):
                 "Passage times for the selector must be calculated before calculating the diffusion coefficient."
             )
 
-        passage_times = self.passageTimes[selector]
+        passage_times = self.passageTimes[selector] / 1000  # convert to ns
         ecdf = ECDF(passage_times)
 
         # FIT DATA
@@ -146,7 +173,7 @@ class DiffusionAnalysis(MembraneAnalysis):
                 "Diffusion coefficient for the selector must be calculated before plotting the diffusion coefficient."
             )
 
-        passage_times = self.passageTimes[selector]
+        passage_times = self.passageTimes[selector] / 1000  # convert to ns
         D = self.D[selector]
 
         ecdf = ECDF(passage_times)
@@ -159,7 +186,6 @@ class DiffusionAnalysis(MembraneAnalysis):
         y_hom_cdf = self.fitfunc_hom_cdf(x_cdf, D, self.L)
 
         fig, (ax1, ax2) = plt.subplots(2)
-        print(fig)
         fig.suptitle("PDF and CDF fit")
         ax2.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5])
         ax2.plot(x_cdf[1:], y_hom_cdf[1:], label="hom", color="red", ls="dashed")
@@ -199,7 +225,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         # print(bootstrap_pieces[0].shape)
         bootstrap_diffusions = np.zeros(n_bootstraps)
         for i, piece in enumerate(bootstrap_pieces):
-            ffs, ffe, _ = tfm.dur_dist_improved(
+            ffs, ffe, _ = dur_dist_improved(
                 piece, [self.z_lower, self.z_lower + self.L]
             )
             bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs)
@@ -241,7 +267,7 @@ class DiffusionAnalysis(MembraneAnalysis):
                 :, sample_start_index : sample_start_index + bootstrap_sample_length, 2
             ]
             try:
-                ffs, ffe, _ = tfm.dur_dist_improved(sample, [z_lower, z_lower + L])
+                ffs, ffe, _ = dur_dist_improved(sample, [z_lower, z_lower + L])
                 bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, L, plot=plot)
             except Exception as e:
                 print(e)
@@ -259,7 +285,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             "D": self.D,
             "n_passages": self.n_passages,
         }
-        print(out)
+        # print(out)
         self._store_dict_as_json(
             out, self.results_dir + "diffusion_analysis_results.json"
         )
@@ -268,6 +294,56 @@ class DiffusionAnalysis(MembraneAnalysis):
     def _store_dict_as_json(dictionary, filename):
         with open(filename, "w") as f:
             json.dump(dictionary, f)
+
+    # TODO implement this function correctly
+    def plot_rand_passages(ax, selector: str, rand_n: int):
+        """kernel_size = 1000
+        kernel = np.ones(kernel_size) / kernel_size
+        fig = plt.figure("3d trajektorien")
+        ax = fig.add_subplot(projection="3d")
+        for sel in np.random.randint(0, x_passages.shape[0], size=(3)):
+            print(sel)
+            x_passages_sel = x_passages[sel]
+            y_passages_sel = y_passages[sel]
+            z_passages_sel = z_passages[sel]
+            slicer = slice(ffs[sel] - 1, ffe[sel] + 2, 1)
+            ax.plot(
+                ax,
+                x_passages_sel[slicer],
+                y_passages_sel[slicer],
+                z_passages_sel[slicer],
+            )  # ++1 so that the last timestep is also included
+            ax.scatter(
+                ax,
+                x_passages_sel[ffs[sel] - 1],
+                y_passages_sel[ffs[sel] - 1],
+                z_passages_sel[ffs[sel] - 1],
+            )  # starting point
+            ax.scatter(
+                ax,
+                x_passages_sel[ffe[sel] + 2],
+                y_passages_sel[ffe[sel] + 2],
+                z_passages_sel[ffe[sel] + 2],
+            )  # end point"""
+        pass
+
+    # TODO: implement this function correctly
+    def plot_starting_points(ax, X, Y, Z):
+        """fig = plt.figure("plotten aller Startpunkte")
+        ax = fig.add_subplot(projection="3d")
+        ax.set_xlabel("x in nm", fontsize="x-large")
+        ax.set_ylabel("y in nm", fontsize="x-large")
+        ax.set_zlabel("z in nm", fontsize="x-large")
+        ax.set_title(
+            "Membrane-entry points of the passage-trajectories (" + res.upper() + ")",
+            fontsize="x-large",
+        )
+        ax.scatter(
+            x_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
+            y_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
+            z_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
+        )  # ugly way of getting the point. maybe there is a better way"""
+        pass
 
     #########################################################################################
     # Funktionen aus Gottholds Skript #######################################################

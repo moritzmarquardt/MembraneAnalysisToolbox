@@ -10,7 +10,7 @@ authors = [
 ]
 description = "Toolbox for analysing simulation data of Membranes and Carbon Materials"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = {file = "LICENCE"}
 classifiers = [
     "Programming Language :: Python :: 3",

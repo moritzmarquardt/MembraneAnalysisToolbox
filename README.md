@@ -1,24 +1,24 @@
 # Membrane Analysis Toolbox
 
-This toolbox contains several methods for analysing Carbon Materials and Membranes.
-It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart.
-It also uses work by Gotthold Fläschner.
+The MembraneAnalysisToolbox is a python package than can be installed in a python environment via pip.
 
-## Main Capabilities:
-- TransitionPathAnalysis class with multiple features:
-    - analyse membrane and trajectories using only the traj.xtc and the topol.tpr file
-    - analyse membrane dimensions and location
-    - plot membrane histograms
-    - analyse passages through membrane and their **passage time distribution**
-    - calculate the **diffusion coefficient** for a solvent
-    - calculate the **path length** through a cubic structure membrane
-- EffectivePoreSizeAnalysis
-    - analyse the **effective radius** of membrane pores
-    - analyse the density of molecules in the pore using kernels for a **density heatmap**
+This toolbox contains methods for analysing molecular dynamics simulation data of Membranes.
+It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing metal organic frameworks and their properties. This Toolbox also uses work by Gotthold Fläschner.
+
+## Main Components:
+- TransitionPathAnalysis class with the following key features:
+    - Analyse passages through membrane and their **passage time distribution**
+    - Calculate the **diffusion coefficient** for a solvent
+- EffectivePoreSizeAnalysis class with the following key features:
+    - Analyse the **effective pore radius** of a membrane pore
+    - Analyse the density of molecules in the pore using kernels for a **density heatmap**
 
 
-## Usage (how to install and use this python package):
+## Installation:
+MembraneAnalysisToolbox is developed using python 3.12 and installing it requires a minimum of python 3.12.
 
 1) Download or clone this repository
-2) run ```pip install [path to package]``` in your python environment
-3) look at examples/ to see how the classes are imported and used
+2) Run `pip install [path to package]` in your python environment
+
+## Usage
+Look at `examples/` to see how the classes are imported and used.

@@ -21,4 +21,6 @@ MembraneAnalysisToolbox is developed using python 3.12 and installing it require
 2) Run `pip install [path to package]` in your python environment
 
 ## Usage
-Look at `examples/` to see how the classes are imported and used.
+- Look at `examples/` to see how the classes are imported and used.
+
+- Check out the `best_practice.pdf` for some best practices on using this package.

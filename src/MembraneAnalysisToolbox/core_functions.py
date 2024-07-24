@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.optimize import least_squares
+from statsmodels.distributions.empirical_distribution import ECDF
 
 """
 This is a collection of core functions that are used by the analysis classes,
@@ -223,3 +225,85 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
         for i in range(0, arr.size):
             f.write("\n")
             f.write(str(arr[i]))
+
+
+def cubic_structure_calc_pathlength_of_passages(
+    X,
+    Y,
+    Z,
+):
+    pass
+
+
+def calculate_diffusion(L: float, passage_times: list):
+    """
+    calculate diffusion using Gotthold Fläschner Script.
+
+    Args:
+        L: length of the membrane in Angstrom
+        passage_times: passage times in ns
+
+    Returns:
+        D_hom_cdf: diffusion coefficient
+    """
+    ecdf = ECDF(passage_times)
+
+    params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
+
+    D_hom_cdf = params_hom_cdf[0]
+
+    return D_hom_cdf
+
+
+#########################################################################################
+# Funktionen aus Gottholds Skript #######################################################
+def hom_cdf(x, D, i, L):
+    t = (L) ** 2 / (i**2 * np.pi**2 * D)  # L^2/(i^2*pi^2*D)
+    return (-1) ** (i - 1) * np.exp(-x / t)  # summand in Gl. 10 vanHijkoop
+
+
+def fitfunc_hom_cdf(x, D, L):
+    i = 50  # Summe geht bis 50 (approx statt undendlich)
+    result = 0
+    for j in range(1, i):
+        result = result + hom_cdf(x, D, j, L)
+    return 1 - 2 * result  # gleichung 10 in vanHijkoop paper
+
+
+def fitfunc_hom_cdf_lsq(L):
+    def f(D, x, y):
+        i = 50
+        result = 0
+        for j in range(1, i):
+            result = result + hom_cdf(x, D, j, L)
+        return 1 - 2 * result - y
+
+    return f
+
+
+def fitting_hom_cdf_lsq(x_data, y_data, L):
+    res_robust = least_squares(
+        fitfunc_hom_cdf_lsq(L),
+        x0=20,
+        loss="soft_l1",
+        f_scale=0.3,
+        args=(x_data, y_data),
+    )
+    return res_robust.x
+
+
+def fitfunc_hom(x, D, L):
+    i = 151
+    result = 0
+    for j in range(1, i):
+        result = result + hom(x, D, j, L)
+    return 2 * np.pi**2 * D / (L) ** 2 * result
+
+
+def hom(x, D, i, L):
+    t = (L) ** 2 / (i**2 * np.pi**2 * D)
+    return (-1) ** (i - 1) * i**2 * np.exp(-x / t)
+
+
+# Ende Funktionen aus Gottholds Skript ##################################################
+#########################################################################################

@@ -88,9 +88,9 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
     returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)
 
     Args:
-
-
-
+        T (np.ndarray): trajectories: 3D array with shape (number of trajectories, number of timesteps, 3)
+        isAtomAbove (function): function that returns True if the atom is above the membrane
+        isAtomBelow (function): function that returns True if the atom is below the membrane
         p (int, optional): timesteps, that an object has to be above or below a
         bound to be seen as above or below. different values than 1 can make sense
         to compensate uncontinuous behavior (see documentation for more details). Defaults to 1.
@@ -103,10 +103,10 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
         trajectories have a transition; ffs is the last timestep where the traj is outside
         the bounds and ffe is the first timestep where the traj is outside the bounds again
 
+    Raises:
+        Exception: no transition detected. Check traj files and boundaries
+        AttributeError: 'list' object has no attribute 'astype' if the list of starting times ffs/ffe/indizes is empty and no passage was detected; check boundaries and trajectories
 
-    errors:     if this method throws the error "AttributeError: 'list' object has no attribute
-    'astype'" it means, that the list of starting times ffs/ffe/indizes is empty and no
-    passage was detected. Check boundaries and trajectories!
     """
     number_of_traj = T[:, 0, 0].size
     number_of_timesteps = T[0, :, 0].size

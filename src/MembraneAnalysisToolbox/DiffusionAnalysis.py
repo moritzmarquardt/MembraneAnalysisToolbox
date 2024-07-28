@@ -8,7 +8,6 @@ from statsmodels.distributions.empirical_distribution import ECDF
 
 from MembraneAnalysisToolbox.core_functions import (
     calculate_diffusion,
-    dur_dist_improved,
     findPassages,
     fitfunc_hom,
     fitfunc_hom_cdf,

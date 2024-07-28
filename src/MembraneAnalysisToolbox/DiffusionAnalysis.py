@@ -218,6 +218,7 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         return fig
 
+    """
     def bootstrap_diffusion(self, selector, n_bootstraps, plot=True):
         # first do the bootstrapping for only one element
         if not isinstance(selector, str):
@@ -283,6 +284,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             print("\nBootstrapping finished.")
 
         return bootstrap_diffusions
+    """
 
     def store_results_json(self):
         out = {

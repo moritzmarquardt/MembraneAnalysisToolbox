@@ -9,11 +9,13 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from MembraneAnalysisToolbox.core_functions import (
     calculate_diffusion,
     dur_dist_improved,
+    findPassages,
     fitfunc_hom,
     fitfunc_hom_cdf,
     save_1darr_to_txt,
 )
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis
+from MembraneAnalysisToolbox.MembraneStructures import Membrane
 
 
 class DiffusionAnalysis(MembraneAnalysis):
@@ -38,12 +40,10 @@ class DiffusionAnalysis(MembraneAnalysis):
         self,
         topology_file: str,
         trajectory_file: str,
+        membrane: Membrane,
         analysis_max_step_size_ps: int = None,
         results_dir: str = None,
         verbose: bool = True,
-        L: float = None,
-        z_lower: float = None,
-        D: float = None,
     ):
         super().__init__(
             topology_file=topology_file,
@@ -51,9 +51,8 @@ class DiffusionAnalysis(MembraneAnalysis):
             analysis_max_step_size_ps=analysis_max_step_size_ps,
             results_dir=results_dir,
             verbose=verbose,
+            membrane=membrane,
         )
-        self.L = L
-        self.z_lower = z_lower
         self.passageTimes = {}
         self.passageStarts = {}
         self.passageIndices = {}
@@ -70,41 +69,44 @@ class DiffusionAnalysis(MembraneAnalysis):
     def __str__(self):
         return (
             f"DiffusionAnalysis object:\n"
-            f"  L: {self.L}\n"
-            f"  z_lower: {self.z_lower}\n"
-            f"  D: {self.D}\n"
-            f"  passageTimes: {self.passageTimes}\n"
-            f"  passageStarts: {self.passageStarts}\n"
-            f"  passageIndices: {self.passageIndices}\n"
-            f"  n_passages: {self.n_passages}\n"
-            f"  results_dir: {self.results_dir}\n"
             f"  topology_file: {self.topology_file}\n"
             f"  trajectory_file: {self.trajectory_file}\n"
+            f"  results_dir: {self.results_dir}\n"
+            f"  Membrane: {self.membrane}\n"
             f"  verbose: {self.verbose}\n"
-            f"  analysis_max_step_size_ps: {self.analysis_max_step_size_ps}\n"
-            f"  actual analysed step_size: {self.step_size}\n"
-            f"  nth_frame: {self.nth_frame}\n"
-            f"  n_frames analysed: {self.n_frames}\n"
-            f"  u: {self.u}\n"
             f"  trajectories: {self.trajectories.keys()}\n"
+            f"  results: \n"
+            f"      D: {self.D}\n"
+            f"      passageTimes: {self.passageTimes}\n"
+            f"      passageStarts: {self.passageStarts}\n"
+            f"      passageIndices: {self.passageIndices}\n"
+            f"      n_passages: {self.n_passages}\n"
+            f"  Simulation footprints: \n"
+            f"      u_trajectory_dt (ps): {self.u.trajectory.dt}\n"
+            f"      u_sim_time (ps): {(self.u.trajectory.n_frames - 1) * self.u.trajectory.dt}\n"
+            f"      analysis_max_step_size_ps (ps): {self.analysis_max_step_size_ps}\n"
+            f"      actual analysed step_size (ps): {self.step_size}\n"
+            f"      nth_frame: {self.nth_frame}\n"
+            f"      n_frames analysed: {self.n_frames}\n"
+            f"      ana_sim_time (ps): {(self.n_frames - 1) * self.step_size}\n"
+            f"      u: {self.u}\n"
         )
 
-    def find_membrane_location_hexstructure(self, mem_selector: str):
-        self.z_lower = super().find_membrane_location_hexstructure(mem_selector, self.L)
+    def find_membrane_location(self):
+        self._allocateTrajectories(self.membrane.selector)
+        self.membrane.find_location(self.trajectories[self.membrane.selector])
 
-    def verify_membrane_location(self, mem_selector: str):
-        fig_hist, ax_hist = self.create_hist_for_axis(mem_selector, 2)
-        ax_hist.axvline(self.z_lower, color="r", linestyle="--", label="z_lower")
-        ax_hist.axvline(
-            self.z_lower + self.L, color="g", linestyle="--", label="z_upper"
-        )
-        ax_hist.legend()
-        self.save_fig_to_results(fig=fig_hist, name="x_hist_hex_borders")
+    def print_membrane_location(self):
+        self.membrane.print_location()
+
+    def verify_membrane_location(self):
+        self._allocateTrajectories(self.membrane.selector)
+        self.membrane.plot_location(self.trajectories[self.membrane.selector])
 
     def calc_passagetimes(self, selector: str):
         """
         Calculates the passage times for the given selectors.
-        store it in ns in self.passageTimes[selector]
+        store it in ps in self.passageTimes[selector]
 
         Args:
             selectors (str): The selectors to calculate passage times for.
@@ -112,44 +114,39 @@ class DiffusionAnalysis(MembraneAnalysis):
         """
         self._allocateTrajectories(selector)
 
-        if self.z_lower is None:
-            raise ValueError(
-                "z_lower must be set before calculating passage times."
-                "This can be done by calling find_membrane_location_hexstructure."
-            )
-        if self.L is None:
-            raise ValueError("L must be set before calculating passage times.")
+        isAtomAbove, isAtomBelow = self.membrane.define_isabove_isbelow_funcs()
 
-        z = self.trajectories[selector][:, :, 2]
-        z_boundaries = [self.z_lower, self.z_lower + self.L]
-        ffs, ffe, ffi = dur_dist_improved(
-            z, z_boundaries
-        )  # only calcs the timesteps, not the time
+        T = self.trajectories[selector]
+        ffs, ffe, ffi = findPassages(T, isAtomAbove, isAtomBelow)
 
-        # cast to int to get rid of the decimal places because they dont make it more accurate anyways
-        # the max accuracy are the timesteps
-        ffs_ns = ffs * self.u.trajectory.dt * self.nth_frame
-        ffe_ns = ffe * self.u.trajectory.dt * self.nth_frame
+        # convert timesteps to ps
+        ffs_ps = ffs * self.u.trajectory.dt * self.nth_frame
+        ffe_ps = ffe * self.u.trajectory.dt * self.nth_frame
 
-        self.passageTimes[selector] = ffe_ns - ffs_ns
-        self.passageStarts[selector] = ffs_ns
+        # store the results
+        self.passageTimes[selector] = ffe_ps - ffs_ps
+        self.passageStarts[selector] = ffs_ps
         self.passageIndices[selector] = ffi
-        self.n_passages[selector] = len(ffs_ns)
+        self.n_passages[selector] = len(ffs_ps)
 
-    # TODO correct implementation of this function
     def plot_passagetimedist(self, selector: str):
         if selector not in self.passageTimes.keys():
             raise ValueError(
                 "Passage times for the selector must be calculated before plotting the distribution."
             )
-        plt.figure("Verteilung der Durchgangszeiten")
-        passage_times = self.passageTimes[selector]
-        self.plot_dist(passage_times, max_range=np.max(passage_times) * 1.1)
-        plt.xlabel("Durchgangszeiten")
-        plt.ylabel("relative Häufigkeit")
+        passage_times = self.passageTimes[selector] / 1000  # convert to ns
+        fig, ax = super()._create_histogram(
+            passage_times,
+            label=None,
+            bins=100,
+            title="Verteilung der Durchgangszeiten",
+            xlabel="Durchgangszeiten in ns",
+            ylabel="relative Häufigkeit",
+        )
+        return fig, ax
 
     def calc_diffusion(self, selector: str):
-        if self.L is None:
+        if self.membrane.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
             )
@@ -161,10 +158,10 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         passage_times = self.passageTimes[selector] / 1000  # convert to ns
 
-        self.D[selector] = calculate_diffusion(self.L, passage_times)
+        self.D[selector] = calculate_diffusion(self.membrane.L, passage_times)
 
     def plot_diffusion(self, selector: str):
-        if self.L is None:
+        if self.membrane.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
             )
@@ -187,12 +184,18 @@ class DiffusionAnalysis(MembraneAnalysis):
         """ PLOT DATA """
         x_lim = centertime * 4
         x_cdf = np.linspace(0, x_lim * 2, 200)
-        y_hom_cdf = fitfunc_hom_cdf(x_cdf, D, self.L)
+        y_hom_cdf = fitfunc_hom_cdf(x_cdf, D, self.membrane.L)
 
         fig, (ax1, ax2) = plt.subplots(2)
         fig.suptitle("PDF and CDF fit")
-        ax2.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5])
-        ax2.plot(x_cdf[1:], y_hom_cdf[1:], label="hom", color="red", ls="dashed")
+        ax2.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5], label="CDF data points")
+        ax2.plot(
+            x_cdf[1:],
+            y_hom_cdf[1:],
+            label="hom",
+            color="red",
+            ls="dashed",
+        )
         ax2.legend(loc="center right")
         ax2.set_xlim(0, x_lim)
 
@@ -206,7 +209,7 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         """ PLOT DATA """
         x = x_cdf
-        y2 = fitfunc_hom(x, D, self.L)
+        y2 = fitfunc_hom(x, D, self.membrane.L)
 
         ax1.hist(passage_times, bins=len(center), density=True, color=[0, 0.5, 0.5])
         ax1.plot(x[1:], y2[1:], label="hom", color="red", ls="dashed")
@@ -230,7 +233,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         bootstrap_diffusions = np.zeros(n_bootstraps)
         for i, piece in enumerate(bootstrap_pieces):
             ffs, ffe, _ = dur_dist_improved(
-                piece, [self.z_lower, self.z_lower + self.L]
+                piece, [self.z_lower, self.z_lower + self.membrane.L]
             )
             bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs)
             if plot:
@@ -284,7 +287,7 @@ class DiffusionAnalysis(MembraneAnalysis):
 
     def store_results_json(self):
         out = {
-            "L": self.L,
+            "L": self.membrane.L,
             "z_lower": self.z_lower,
             "D": self.D,
             "n_passages": self.n_passages,

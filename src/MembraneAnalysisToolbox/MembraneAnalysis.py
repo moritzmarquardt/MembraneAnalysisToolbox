@@ -4,6 +4,7 @@ import sys
 import matplotlib.pyplot as plt
 import MDAnalysis as mda
 import numpy as np
+from MembraneAnalysisToolbox.MembraneStructures import Membrane
 
 
 class MembraneAnalysis:
@@ -65,10 +66,12 @@ class MembraneAnalysis:
         topology_file: str,
         trajectory_file: str,
         results_dir: str,
+        membrane: Membrane,
         analysis_max_step_size_ps: int = None,
         verbose: bool = True,
     ):
         self.verbose = verbose
+        self.membrane = membrane
 
         # 1: Check if the topology and trajectory files exist and have the correct file format
         if not (self._validate_file_extension(topology_file, ".tpr")):
@@ -170,11 +173,14 @@ class MembraneAnalysis:
             indexes = [0]
             for atoms in atomslist:
                 indexes.append(indexes[-1] + atoms.n_atoms)
+            percentage = 0
             for i, _ in enumerate(self.u.trajectory[:: self.nth_frame]):
                 if self.verbose:
-                    percentage = int((i + 1) / self.n_frames * 100)
-                    sys.stdout.write(f"\r\tProgress: {percentage}%")
-                    sys.stdout.flush()
+                    percentage_new = int((i + 1) / self.n_frames * 100)
+                    if percentage_new > percentage:
+                        percentage = percentage_new
+                        sys.stdout.write(f"\r\tProgress: {percentage}%")
+                        sys.stdout.flush()
                 for j, atoms in enumerate(atomslist):
                     positions[indexes[j] : indexes[j + 1], i, :] = atoms.positions
             for i, sele in enumerate(sels_unstored):
@@ -289,7 +295,8 @@ class MembraneAnalysis:
             ax_hist.set_xlabel(xlabel, fontsize="x-large")
         if ylabel is not None:
             ax_hist.set_ylabel(ylabel, fontsize="x-large")
-        ax_hist.legend()
+        if label is not None:
+            ax_hist.legend()
 
         return fig_hist, ax_hist
 
@@ -304,34 +311,6 @@ class MembraneAnalysis:
         fig.savefig(self.results_dir + name + ".png")
         if self.verbose:
             print("Figure saved in: " + self.results_dir + name + ".png")
-
-    # TODO: instead of binning use CDF
-    def find_membrane_location_hexstructure(self, mem_selector: str, L: float) -> float:
-        """
-        Find the lower boundary of the membrane in a hexagonal structure.
-
-        Args:
-            mem_selector (str): The selector for the membrane atoms.
-            L (float): The length of the hexagonal structure.
-
-        Returns:
-            float: The lower boundary of the membrane in the hexagonal structure.
-        """
-        self._allocateTrajectories(mem_selector)
-
-        # Get the z-coordinates of the membrane trajectory
-        z = self.trajectories[mem_selector][:, :, 2].flatten()
-
-        # Calculate the histogram of the z-coordinates
-        _, bins = np.histogram(z, bins=100, density=True)
-
-        # Calculate the upper and lower bounds of the histogram and with that the middle value
-        z_lower = bins[0]
-        z_upper = bins[-1]
-        z_middle = (z_lower + z_upper) / 2
-
-        # Calculate the lower boundary of the hexagonal structure and return it
-        return z_middle - L / 2
 
     def __str__(self) -> str:
         return f"MembraneAnalysis object with {self.n_frames} frames analysed."

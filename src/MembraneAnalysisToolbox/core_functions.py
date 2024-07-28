@@ -83,15 +83,14 @@ def path_cat(X, Y, ffs, ffe):
     return d.astype(int)
 
 
-# TODO make it more effficient (matrix operations of numpy to simplyfy the process?)
-# TODO remove squarerootts and quadratisize the operations
-def dur_dist_improved(S, bounds, p=1, p_middle=1):
+def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
     """measure start and endpoint of passages through the bounds.
     returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)
 
     Args:
-        S (_type_): trajectories without the time-column; each column is a trajectory
-        bounds (_type_): array of floats, that contains the z-coordinate of the boundaries
+
+
+
         p (int, optional): timesteps, that an object has to be above or below a
         bound to be seen as above or below. different values than 1 can make sense
         to compensate uncontinuous behavior (see documentation for more details). Defaults to 1.
@@ -109,8 +108,8 @@ def dur_dist_improved(S, bounds, p=1, p_middle=1):
     'astype'" it means, that the list of starting times ffs/ffe/indizes is empty and no
     passage was detected. Check boundaries and trajectories!
     """
-    number_of_traj = S[:, 0].size
-    number_of_timesteps = S[0, :].size
+    number_of_traj = T[:, 0, 0].size
+    number_of_timesteps = T[0, :, 0].size
     label = np.zeros(number_of_traj)  # how is the object labeled
     middle_count = np.zeros(number_of_traj)  # how long in the middle
     lower_count = np.zeros(number_of_traj)  # how long in the lower layer
@@ -120,21 +119,17 @@ def dur_dist_improved(S, bounds, p=1, p_middle=1):
     indizes = []
     for t in range(number_of_timesteps):
         for a in range(number_of_traj):
-            curr = S[a, t]
+            curr = T[a, t]
             # print(t, curr, label[a], label_count[a], middle_count[a])
-            if curr < bounds[0]:  # object is below lower bound
+            if isAtomBelow(curr):  # object is below lower bound
                 lower_count[a] = lower_count[a] + 1  # one time step longer in the layer
-                if (
-                    lower_count[a] == p
-                ):  # the timestep when it will be labeled with layer 1 (lower layer)
+                upper_count[a] = 0  # set count of upper layer to 0
+                if lower_count[a] == p:
                     if label[a] == 4:  # if it comes from above
-                        # start (first entry to middle layer) start time should be still outside
                         full_flips_start = np.append(
                             full_flips_start, t - middle_count[a] - p
                         )
-                        # end is the current timestep -p, beccause it alredy has been in the
-                        # layer p steps before;
-                        # +1 to have the end time already outside the layer
+                        # end is the current timestep -p, beccause it alredy has been in the layer p steps before;
                         full_flips_end = np.append(full_flips_end, t - p + 1)
                         indizes = np.append(indizes, a)
                     label[a] = 1  # label, that its now in the lower layer
@@ -142,26 +137,10 @@ def dur_dist_improved(S, bounds, p=1, p_middle=1):
                     # (time count) should
                     # go on if the object only slips out the middle for less than p timesteps)
                     middle_count[a] = 0
-                upper_count[a] = 0  # set count of upper layer to 0
 
-            if curr < bounds[1] and curr >= bounds[0]:  # object is between boundaries
-                middle_count[a] = (
-                    middle_count[a] + 1
-                )  # one timestep longer in the middle
-                if (
-                    middle_count[a] == p_middle
-                ):  # if its ready to be counted as beeing in the middle
-                    if label[a] == 1:
-                        label[a] = 2  # label as coming from below
-                    if label[a] == 5:
-                        label[a] = 4  # label as coming from above
-                lower_count[a] = 0
-                upper_count[a] = 0
-
-            if (
-                curr >= bounds[1]
-            ):  # object is above upper layer (analog procedure to below lower bound)
+            elif isAtomAbove(curr):
                 upper_count[a] = upper_count[a] + 1
+                lower_count[a] = 0
                 if upper_count[a] == p:
                     if label[a] == 2:
                         full_flips_start = np.append(
@@ -171,7 +150,19 @@ def dur_dist_improved(S, bounds, p=1, p_middle=1):
                         indizes = np.append(indizes, a)
                     label[a] = 5
                     middle_count[a] = 0
+
+            # if not (isAtomBelow(curr) or isAtomAbove(curr)):
+            else:
+                # one timestep longer in the middle
+                middle_count[a] = middle_count[a] + 1
                 lower_count[a] = 0
+                upper_count[a] = 0
+                if middle_count[a] == p_middle:
+                    # if its ready to be counted as beeing in the middle
+                    if label[a] == 1:
+                        label[a] = 2  # label as coming from below
+                    if label[a] == 5:
+                        label[a] = 4  # label as coming from above
 
     # TODO raise exeption if no passage has been detected for better understanding of errors
     if len(indizes) == 0:

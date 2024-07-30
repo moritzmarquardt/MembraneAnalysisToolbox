@@ -290,10 +290,9 @@ class DiffusionAnalysis(MembraneAnalysis):
 
     def store_results_json(self):
         out = {
-            "L": self.membrane.L,
-            "z_lower": self.z_lower,
             "D": self.D,
             "n_passages": self.n_passages,
+            "membrane": str(self.membrane),
         }
         # print(out)
         self._store_dict_as_json(

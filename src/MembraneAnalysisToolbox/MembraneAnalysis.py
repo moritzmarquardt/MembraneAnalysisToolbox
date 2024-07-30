@@ -126,6 +126,17 @@ class MembraneAnalysis:
         total_simulation_time = self.step_size * self.n_frames
         self.timeline = np.linspace(0, total_simulation_time, self.n_frames)
 
+    def find_membrane_location(self):
+        self._allocateTrajectories(self.membrane.selector)
+        self.membrane.find_location(self.trajectories[self.membrane.selector])
+
+    def print_membrane_location(self):
+        self.membrane.print_location()
+
+    def verify_membrane_location(self):
+        self._allocateTrajectories(self.membrane.selector)
+        self.membrane.plot_location(self.trajectories[self.membrane.selector])
+
     @staticmethod
     def _validate_file_extension(path: str, extension: str) -> bool:
         """This is used to check if a file exists and has the correct file extension.

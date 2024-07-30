@@ -91,17 +91,6 @@ class DiffusionAnalysis(MembraneAnalysis):
             f"      u: {self.u}\n"
         )
 
-    def find_membrane_location(self):
-        self._allocateTrajectories(self.membrane.selector)
-        self.membrane.find_location(self.trajectories[self.membrane.selector])
-
-    def print_membrane_location(self):
-        self.membrane.print_location()
-
-    def verify_membrane_location(self):
-        self._allocateTrajectories(self.membrane.selector)
-        self.membrane.plot_location(self.trajectories[self.membrane.selector])
-
     def calc_passagetimes(self, selector: str):
         """
         Calculates the passage times for the given selectors.

@@ -117,6 +117,19 @@ class DiffusionAnalysis(MembraneAnalysis):
         self.passageIndices[selector] = ffi
         self.n_passages[selector] = len(ffs_ps)
 
+    def calc_passage_distances(self, selector: str):
+        if selector not in self.passageTimes.keys():
+            raise ValueError(
+                "Passage times for the selector must be calculated before calculating the passage distances."
+            )
+        passage_distances = np.zeros(self.n_passages[selector])
+        for i, index in enumerate(self.passageIndices[selector]):
+            T = self.trajectories[selector][index, :, :]
+            dist = self.membrane.calc_passage_length(T)
+            passage_distances[i] = dist
+
+        return passage_distances
+
     def plot_passagetimedist(self, selector: str):
         if selector not in self.passageTimes.keys():
             raise ValueError(

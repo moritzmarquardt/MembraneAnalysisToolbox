@@ -218,14 +218,6 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
             f.write(str(arr[i]))
 
 
-def cubic_structure_calc_pathlength_of_passages(
-    X,
-    Y,
-    Z,
-):
-    pass
-
-
 def calculate_diffusion(L: float, passage_times: list):
     """
     calculate diffusion using Gotthold Fläschner Script.

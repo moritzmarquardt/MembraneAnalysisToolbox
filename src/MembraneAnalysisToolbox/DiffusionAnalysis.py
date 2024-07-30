@@ -351,16 +351,16 @@ class DiffusionAnalysis(MembraneAnalysis):
                 y_passages_sel,
                 z_passages_sel,
             )  # ++1 so that the last timestep is also included
-        ax.scatter(
-            x_passages[:, 0],
-            y_passages[:, 0],
-            z_passages[:, 0],
-        )  # starting point
-        ax.scatter(
-            x_passages[:, -1],
-            y_passages[:, -1],
-            z_passages[:, -1],
-        )  # end point
+            ax.scatter(
+                x_passages_sel[0],
+                y_passages_sel[0],
+                z_passages_sel[0],
+            )  # starting point
+            ax.scatter(
+                x_passages_sel[-1],
+                y_passages_sel[-1],
+                z_passages_sel[-1],
+            )  # end point
         return fig, ax
 
     # TODO: implement this function correctly
@@ -380,9 +380,15 @@ class DiffusionAnalysis(MembraneAnalysis):
         z_passages = self.trajectories[selector][self.passageIndices[selector], :, 2]
         ffs = self.passageStarts[selector] / self.step_size
         ffs = ffs.astype(int)
-        ax.scatter(
+        scatter = ax.scatter(
             x_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
             y_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
             z_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
-        )  # ugly way of getting the point. maybe there is a better way"""
+            c=z_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
+            cmap="viridis",
+        )
+        # ugly way of getting the point. maybe there is a better way"""
+        # Add color bar
+        cbar = fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
+        cbar.set_label("z-value (nm)", fontsize="x-large")
         return fig, ax

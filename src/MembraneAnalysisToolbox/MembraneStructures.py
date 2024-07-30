@@ -191,5 +191,85 @@ class CubicMembrane(Membrane):
 
         return is_above, is_below
 
+    def calc_passage_length(self, T):
+        # TODO implement this function, right now it's just an outline and structure
+        """
+        Function to calculate the passage length of the membrane
+
+        Args:
+            T (np.array): The trajectory of the passage (time, axis)
+        """
+        spheres_crossed = []
+        # system 1 is the upper and lower layer with a total of 8 crossings
+        spheres_system1_center = [
+            [
+                i * self.cube_size + self.cube_size / 2,
+                j * self.cube_size + self.cube_size / 2,
+                l * self.cube_size + self.cube_size / 2,
+            ]
+            for i in range(self.cube_arrangement[0])
+            for j in range(self.cube_arrangement[1])
+            for l in range(self.cube_arrangement[2])
+        ]
+        print(spheres_system1_center)
+        # system 2 is the middle layer with a total of 9 crossings
+        spheres_system2_center = [
+            [i * self.cube_size, j * self.cube_size, self.cube_size]
+            for i in range(self.cube_arrangement[0] + 1)
+            for j in range(self.cube_arrangement[1] + 1)
+        ]
+        print(spheres_system2_center)
+
+        system_label = None
+        for t in range(T.shape[0]):
+            if system_label == 1:
+                dist_spheres_system1 = [
+                    np.sum(np.square(T[t] - sphere_center))
+                    for sphere_center in spheres_system1_center
+                ]
+                crossed_system1 = [
+                    i
+                    for i in range(len(dist_spheres_system1))
+                    if dist_spheres_system1[i] < self.pore_radius**2
+                ]
+                if not crossed_system1:
+                    system_label = None
+                    continue
+                if crossed_system1 and spheres_crossed[-1]:
+                    spheres_crossed.append(spheres_system1_center[crossed_system1[0]])
+
+            elif system_label == 2:
+                pass
+            else:
+                dist_spheres_system1 = [
+                    np.sum(np.square(T[t] - sphere_center))
+                    for sphere_center in spheres_system1_center
+                ]
+                dist_spheres_system2 = [
+                    np.sum(np.square(T[t] - sphere_center))
+                    for sphere_center in spheres_system2_center
+                ]
+                crossed_system1 = [
+                    i
+                    for i in range(len(dist_spheres_system1))
+                    if dist_spheres_system1[i] < self.pore_radius**2
+                ]
+                crossed_system2 = [
+                    i
+                    for i in range(len(dist_spheres_system2))
+                    if dist_spheres_system2[i] < self.pore_radius**2
+                ]
+                print(crossed_system1, crossed_system2)
+                if not crossed_system1 and not crossed_system2:
+                    continue
+                if crossed_system1:
+                    system_label = 1
+                    spheres_crossed.append(spheres_system1_center[crossed_system1[0]])
+                if crossed_system2:
+                    system_label = 2
+                    spheres_crossed.append(spheres_system2_center[crossed_system2[0]])
+
+        return spheres_crossed
+
     def __str__(self) -> str:
         return f"HexagonalMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"

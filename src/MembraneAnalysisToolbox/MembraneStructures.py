@@ -272,4 +272,4 @@ class CubicMembrane(Membrane):
         return spheres_crossed
 
     def __str__(self) -> str:
-        return f"HexagonalMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"
+        return f"CubicMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"

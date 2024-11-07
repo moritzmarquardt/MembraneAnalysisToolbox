@@ -4,7 +4,8 @@ import sys
 import matplotlib.pyplot as plt
 import MDAnalysis as mda
 import numpy as np
-from MembraneAnalysisToolbox.MembraneStructures import Membrane
+
+from MembraneAnalysisToolbox.MembraneStructures import Membrane, Solvent
 
 
 class MembraneAnalysis:
@@ -127,15 +128,25 @@ class MembraneAnalysis:
         self.timeline = np.linspace(0, total_simulation_time, self.n_frames)
 
     def find_membrane_location(self):
-        self._allocateTrajectories(self.membrane.selector)
-        self.membrane.find_location(self.trajectories[self.membrane.selector])
+        if isinstance(self.membrane, Solvent):
+            raise Exception(
+                "Solvent does not have a membrane. Do not call find_membrane_location when analysing solvents."
+            )
+        else:
+            self._allocateTrajectories(self.membrane.selector)
+            self.membrane.find_location(self.trajectories[self.membrane.selector])
 
     def print_membrane_location(self):
         self.membrane.print_location()
 
     def verify_membrane_location(self):
-        self._allocateTrajectories(self.membrane.selector)
-        self.membrane.plot_location(self.trajectories[self.membrane.selector])
+        if isinstance(self.membrane, Solvent):
+            raise Exception(
+                "Solvent does not have a membrane. Do not call verify_membrane_location when analysing solvents."
+            )
+        else:
+            self._allocateTrajectories(self.membrane.selector)
+            self.membrane.plot_location(self.trajectories[self.membrane.selector])
 
     @staticmethod
     def _validate_file_extension(path: str, extension: str) -> bool:

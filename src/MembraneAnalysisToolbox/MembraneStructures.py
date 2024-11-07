@@ -9,9 +9,11 @@ class Membrane(ABC):
     def find_location(self):
         pass
 
+    @abstractmethod
     def print_location(self):
         pass
 
+    @abstractmethod
     def plot_location(self):
         pass
 
@@ -278,13 +280,14 @@ class CubicMembrane(Membrane):
 # Membrane Structure to be able to analyse the solvent system,
 # where no membrane is present
 class Solvent(Membrane):
-    def __init__(self, lowerZ, upperZ):
-        self.lowerZ = None
-        self.upperZ = None
+    def __init__(self, lowerZ, upperZ, L):
+        self.lowerZ = lowerZ
+        self.upperZ = upperZ
+        self.L = L
         self.isAtomAbove = None
         self.isAtomBelow = None
 
-    def find_location(self, trajectories):
+    def find_location(self):
         pass
 
     def print_location(self):
@@ -292,16 +295,8 @@ class Solvent(Membrane):
             f"Solvent system with virtual borders at z={self.lowerZ} and z={self.upperZ}"
         )
 
-    def plot_location(self, trajectories):
-        plt.figure()
-        z = trajectories[:, 0, 2].flatten()
-        plt.hist(z, bins=50, density=True, label="Histogram")
-        plt.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
-        plt.axvline(self.upperZ, color="r", linestyle="--", label="Upper boundary")
-        plt.xlabel("z-coordinate")
-        plt.ylabel("Density")
-        plt.title("Histogram of the z-coordinates of the membrane")
-        plt.legend()
+    def plot_location(self):
+        pass
 
     def define_isabove_isbelow_funcs(self):
         def is_above(curr):

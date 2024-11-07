@@ -35,7 +35,7 @@ class HexagonalMembrane(Membrane):
         """
         Function to find the lower boundary of the hexagonal structure
 
-        Args:
+        params:
             trajectories (np.array): The trajectory of the membrane selector atoms
         """
 
@@ -54,9 +54,17 @@ class HexagonalMembrane(Membrane):
         self.lowerZ = z_middle - self.L / 2
 
     def print_location(self):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the hexagonal structure is not set. Run find_location() first."
+            )
         print(f"Lower boundary of the hexagonal structure: {self.lowerZ}")
 
     def plot_location(self, trajectories):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the hexagonal structure is not set. Run find_location() first."
+            )
         plt.figure()
         z = trajectories[:, 0, 2].flatten()
         plt.hist(z, bins=50, density=True, label="Histogram")
@@ -70,6 +78,11 @@ class HexagonalMembrane(Membrane):
         plt.legend()
 
     def define_isabove_isbelow_funcs(self):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the hexagonal structure is not set. Run find_location() first."
+            )
+
         def is_above(curr):
             # curr is the position to be evaluated
             return curr[2] > self.lowerZ + self.L
@@ -100,6 +113,7 @@ class CubicMembrane(Membrane):
             cube_arrangement (tuple): The arrangement of the cubes in the membrane.
                 The tuple should be of the form (n_x, n_y, n_z) where n_x, n_y, n_z are the number of cubes in the x, y, z direction
             cube_size (float): The size of one cube
+            pore_radius (float): The radius of the pore
         """
         self.selector = selector
         self.L = cube_arrangement[2] * cube_size
@@ -138,13 +152,21 @@ class CubicMembrane(Membrane):
 
         z_middle = (z_lower + z_upper) / 2
 
-        # Calculate the lower boundary of the hexagonal structure and return it
+        # Calculate the lower boundary of the cubic structure and return it
         self.lowerZ = z_middle - self.L / 2
 
     def print_location(self):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the cubic structure is not set. Run find_location() first."
+            )
         print(f"Lower boundary of the hexagonal structure: {self.lowerZ}")
 
     def plot_location(self, trajectories):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the cubic structure is not set. Run find_location() first."
+            )
         plt.figure()
         z = trajectories[:, 0, 2].flatten()
         plt.hist(z, bins=100, density=True, label="Histogram")
@@ -158,6 +180,11 @@ class CubicMembrane(Membrane):
         plt.legend()
 
     def define_isabove_isbelow_funcs(self):
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the cubic structure is not set. Run find_location() first."
+            )
+
         def is_above(curr):
             # curr is the position to be evaluated
             lower_border = self.lowerZ + self.L - self.pore_radius
@@ -277,9 +304,11 @@ class CubicMembrane(Membrane):
         return f"CubicMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"
 
 
-# Membrane Structure to be able to analyse the solvent system,
-# where no membrane is present
 class Solvent(Membrane):
+    """
+    Membrane Structure implementation to be able to analyse the solvent system, where no membrane is present.
+    """
+
     def __init__(self, lowerZ, upperZ, L):
         self.lowerZ = lowerZ
         self.upperZ = upperZ

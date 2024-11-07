@@ -128,6 +128,13 @@ class MembraneAnalysis:
         self.timeline = np.linspace(0, total_simulation_time, self.n_frames)
 
     def find_membrane_location(self):
+        """
+        Find the location of the membrane if it is not a solvent.
+        It calls the find_location method of the membrane object using the membrane trajectories.
+
+        Raises:
+            Exception: If the membrane is a solvent.
+        """
         if isinstance(self.membrane, Solvent):
             raise Exception(
                 "Solvent does not have a membrane. Do not call find_membrane_location when analysing solvents."
@@ -137,6 +144,9 @@ class MembraneAnalysis:
             self.membrane.find_location(self.trajectories[self.membrane.selector])
 
     def print_membrane_location(self):
+        """
+        Print the location of the membrane.
+        """
         self.membrane.print_location()
 
     def verify_membrane_location(self):

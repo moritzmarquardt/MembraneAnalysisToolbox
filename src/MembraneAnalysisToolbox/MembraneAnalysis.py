@@ -140,8 +140,18 @@ class MembraneAnalysis:
                 "Solvent does not have a membrane. Do not call find_membrane_location when analysing solvents."
             )
         else:
-            self._allocateTrajectories(self.membrane.selector)
-            self.membrane.find_location(self.trajectories[self.membrane.selector])
+            self._allocateTrajectories(self.membrane.selectors)
+
+            # Combine trajectories for all selectors into one array
+            combined_trajectories = []
+            for selector in self.membrane.selectors:
+                combined_trajectories.append(self.trajectories[selector])
+
+            # Convert the list of trajectories to a NumPy array
+            combined_trajectories = np.concatenate(combined_trajectories, axis=0)
+            self.membrane.find_location(combined_trajectories)
+
+            # self.membrane.find_location(self.trajectories[self.membrane.selectors])
 
     def print_membrane_location(self):
         """
@@ -155,8 +165,18 @@ class MembraneAnalysis:
                 "Solvent does not have a membrane. Do not call verify_membrane_location when analysing solvents."
             )
         else:
-            self._allocateTrajectories(self.membrane.selector)
-            self.membrane.plot_location(self.trajectories[self.membrane.selector])
+            self._allocateTrajectories(self.membrane.selectors)
+
+            # Combine trajectories for all selectors into one array
+            combined_trajectories = []
+            for selector in self.membrane.selectors:
+                combined_trajectories.append(self.trajectories[selector])
+
+            # Convert the list of trajectories to a NumPy array
+            combined_trajectories = np.concatenate(combined_trajectories, axis=0)
+            self.membrane.plot_location(combined_trajectories)
+
+            # self.membrane.plot_location(self.trajectories[self.membrane.selectors])
 
     @staticmethod
     def _validate_file_extension(path: str, extension: str) -> bool:

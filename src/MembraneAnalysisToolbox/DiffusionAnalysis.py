@@ -14,7 +14,11 @@ from MembraneAnalysisToolbox.core_functions import (
     save_1darr_to_txt,
 )
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis
-from MembraneAnalysisToolbox.MembraneStructures import Membrane
+from MembraneAnalysisToolbox.MembraneStructures import (
+    HexagonalMembrane,
+    Membrane,
+    MembraneForDiffusionAnalysis,
+)
 
 
 class DiffusionAnalysis(MembraneAnalysis):
@@ -39,7 +43,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         self,
         topology_file: str,
         trajectory_file: str,
-        membrane: Membrane,
+        membrane: MembraneForDiffusionAnalysis,
         analysis_max_step_size_ps: int = None,
         results_dir: str = None,
         verbose: bool = True,
@@ -182,7 +186,7 @@ class DiffusionAnalysis(MembraneAnalysis):
         idx = (np.abs(ecdf.y - 0.5)).argmin()
         centertime = ecdf.x[idx]
 
-        """ PLOT DATA """
+        # PLOT DATA
         x_lim = centertime * 4
         x_cdf = np.linspace(0, x_lim * 2, 200)
         y_hom_cdf = fitfunc_hom_cdf(x_cdf, D, self.membrane.L)
@@ -201,14 +205,14 @@ class DiffusionAnalysis(MembraneAnalysis):
         ax2.set_xlim(0, x_lim)
 
         # plot PDF
-        """ PREPARE DATA """
+        # PREPARE DATA
         bins = int(10 * np.max(passage_times) / centertime)
         histo, edges = np.histogram(passage_times, bins, density=True)
         center = edges - (edges[2] - edges[1])
         center = np.delete(center, 0)
         edges = np.delete(edges, 0)
 
-        """ PLOT DATA """
+        # PLOT DATA
         x = x_cdf
         y2 = fitfunc_hom(x, D, self.membrane.L)
 

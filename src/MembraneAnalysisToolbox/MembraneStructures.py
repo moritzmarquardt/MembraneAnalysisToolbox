@@ -5,12 +5,26 @@ import numpy as np
 
 
 class Membrane(ABC):
+    """
+    Abstract class for the membrane structure.
+    A membrane is a set of atoms that form a structure in the simulation box of a MD simulation.
+    Child classes are meant to implement a specific membrane structure (e.g. hexagonal, cubic).
+    All these membrane structures should have the following basic functionality:
+    - find_location: Find the location of the membrane in the simulation box and store it as a class attribute
+    - print_location: Print the location of the membrane
+    - plot_location: Plot the location of the membrane
+    - __str__: Return a string representation of the membrane
+
+    Each membrane can have different attributes, depending on the structure.
+    The membrane structures are meant to be a collection of attributes and functions that are specific to the structure.
+    """
+
     @abstractmethod
-    def find_location(self):
+    def find_location(self) -> None:
         pass
 
     @abstractmethod
-    def print_location(self):
+    def print_location(self) -> None:
         pass
 
     @abstractmethod
@@ -18,26 +32,73 @@ class Membrane(ABC):
         pass
 
     @abstractmethod
+    def __str__(self) -> str:
+        pass
+
+
+class MembraneForDiffusionAnalysis(Membrane):
+    """
+    Define what functions are necessary for a membrane to be used in the diffusion analysis.
+    """
+
+    @abstractmethod
     def define_isabove_isbelow_funcs(self):
         pass
 
 
-class HexagonalMembrane(Membrane):
-    def __init__(self, selector, L):
-        self.selector = selector
+class MembraneForPoreSizeAnalysis(Membrane):
+    """
+    Define what functions are necessary for a membrane to be used in the effective pore size analysis.
+    """
+
+    @abstractmethod
+    def _find_zConstraints(self):
+        pass
+
+    @abstractmethod
+    def _find_yConstraints(self):
+        pass
+
+
+class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreSizeAnalysis):
+    """
+    Class for the hexagonal membrane structure.
+    It should be able to be used for both the diffusion analysis and the effective pore size analysis.
+    A hexagonal membrane is characterised by a lower boundary lowerZ and a thickness L.
+    """
+
+    def __init__(
+        self,
+        selectors: list[str],
+        L: float = None,
+        lowerZ: float = None,
+        isAtomAbove: callable = None,
+        isAtomBelow: callable = None,
+        y_middle: float = None,
+        y_range: float = None,
+    ):
+        if isinstance(selectors, str):
+            selectors = [selectors]
+        self.selectors = selectors
         self.L = L
-        self.lowerZ = None
-        self.isAtomAbove = None
-        self.isAtomBelow = None
+        self.lowerZ = lowerZ
+        self.isAtomAbove = isAtomAbove
+        self.isAtomBelow = isAtomBelow
+        self.y_middle = y_middle
+        self.y_range = y_range
 
     def find_location(self, trajectories):
         # TODO: Use cdf instead of histogram to avoid binning
         """
-        Function to find the lower boundary of the hexagonal structure
+        Function to find the lower boundary of the hexagonal structure.
+        Sets the lowerZ attribute, requires the L attribute.
 
         params:
             trajectories (np.array): The trajectory of the membrane selector atoms
         """
+
+        if self.L is None:
+            raise ValueError("The L attribute is not set.")
 
         # Get the z-coordinates of the membrane trajectory
         z = trajectories[:, 0, 2].flatten()
@@ -54,6 +115,10 @@ class HexagonalMembrane(Membrane):
         self.lowerZ = z_middle - self.L / 2
 
     def print_location(self):
+        """
+        Print the lower boundary of the hexagonal structure.
+        lowerZ attribute must be set (for example with the find_location function).
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the hexagonal structure is not set. Run find_location() first."
@@ -61,6 +126,10 @@ class HexagonalMembrane(Membrane):
         print(f"Lower boundary of the hexagonal structure: {self.lowerZ}")
 
     def plot_location(self, trajectories):
+        """
+        Plot the histogram of the z-coordinates of the membrane selector atoms and the boundaries of the hexagonal structure.
+        lowerZ attribute must be set (for example with the find_location function).
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the hexagonal structure is not set. Run find_location() first."
@@ -78,6 +147,10 @@ class HexagonalMembrane(Membrane):
         plt.legend()
 
     def define_isabove_isbelow_funcs(self):
+        """
+        Define the isAtomAbove and isAtomBelow functions for the hexagonal structure.
+        lowerZ attribute must be set (for example with the find_location function).
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the hexagonal structure is not set. Run find_location() first."
@@ -96,33 +169,43 @@ class HexagonalMembrane(Membrane):
         return is_above, is_below
 
     def __str__(self) -> str:
-        return f"HexagonalMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}"
+        attributes = vars(self)
+        attributes_str = ", \n".join(
+            f"{key}={value}" for key, value in attributes.items()
+        )
+        return f"HexagonalMembrane: {attributes_str}"
+        # return f"HexagonalMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}"
 
 
-class CubicMembrane(Membrane):
+class CubicMembrane(MembraneForDiffusionAnalysis):
     def __init__(
         self,
-        selector: str,
+        selectors: list[str],
         cube_arrangement: tuple,
         cube_size: float,
         pore_radius: float,
+        lowerZ: float = None,
+        isAtomAbove: callable = None,
+        isAtomBelow: callable = None,
     ):
         """
         Args:
-            selector (str): The selector for the membrane atoms
+            selectors (list[str]): The selector for the membrane atoms
             cube_arrangement (tuple): The arrangement of the cubes in the membrane.
                 The tuple should be of the form (n_x, n_y, n_z) where n_x, n_y, n_z are the number of cubes in the x, y, z direction
             cube_size (float): The size of one cube
             pore_radius (float): The radius of the pore
         """
-        self.selector = selector
+        if isinstance(selectors, str):
+            selectors = [selectors]
+        self.selectors = selectors
         self.L = cube_arrangement[2] * cube_size
-        self.lowerZ = None
         self.cube_arrangement = cube_arrangement
         self.cube_size = cube_size
         self.pore_radius = pore_radius
-        self.isAtomAbove = None
-        self.isAtomBelow = None
+        self.lowerZ = lowerZ
+        self.isAtomAbove = isAtomAbove
+        self.isAtomBelow = isAtomBelow
 
         c = self.cube_size
         self.middle_points = [
@@ -221,7 +304,6 @@ class CubicMembrane(Membrane):
         return is_above, is_below
 
     def calc_passage_length(self, T):
-        # TODO implement this function, right now it's just an outline and structure
         """
         Function to calculate the passage length of the membrane
 
@@ -301,15 +383,16 @@ class CubicMembrane(Membrane):
         return spheres_crossed
 
     def __str__(self) -> str:
-        return f"CubicMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"
+        return f"CubicMembrane: L={self.L}; selector={self.selectors}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"
 
 
-class Solvent(Membrane):
+class Solvent(MembraneForDiffusionAnalysis):
     """
     Membrane Structure implementation to be able to analyse the solvent system, where no membrane is present.
     """
 
     def __init__(self, lowerZ, upperZ, L):
+        self.selectors = None
         self.lowerZ = lowerZ
         self.upperZ = upperZ
         self.L = L
@@ -325,6 +408,7 @@ class Solvent(Membrane):
         )
 
     def plot_location(self):
+        # TODO plot the distribution of the solvent atoms and the defined borders
         pass
 
     def define_isabove_isbelow_funcs(self):

@@ -93,6 +93,9 @@ class DiffusionAnalysis(MembraneAnalysis):
             f"      n_frames analysed: {self.n_frames}\n"
             f"      ana_sim_time (ps): {(self.n_frames - 1) * self.step_size}\n"
             f"      u: {self.u}\n"
+            f"      unique atom names: {set(atom.name for atom in self.u.atoms)}\n"
+            f"      unique tyep: {set(res.resname for res in self.u.residues)}\n"
+            f"      unique combinations: {set((atom.resname, atom.name) for atom in self.u.atoms)}\n"
         )
 
     def calc_passagetimes(self, selector: str):

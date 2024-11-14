@@ -211,11 +211,15 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
     Returns:
     None
     """
-
-    with open(path, "w") as f:
-        for i in range(0, arr.size):
-            f.write("\n")
-            f.write(str(arr[i]))
+    try:
+        with open(path, "w") as f:
+            for i in range(0, arr.size):
+                f.write("\n")
+                f.write(str(arr[i]))
+    except PermissionError:
+        print(
+            f"PermissionError: Permission denied to {path}. The results will not be saved."
+        )
 
 
 def calculate_diffusion(L: float, passage_times: list):

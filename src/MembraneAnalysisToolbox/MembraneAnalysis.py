@@ -92,10 +92,17 @@ class MembraneAnalysis:
             self.trajectory_file = trajectory_file
 
         # 2: Check if the results directory exists and create it if it does not
-        self._validate_and_create_results_dir(results_dir)
-        self.results_dir = results_dir
-        if self.verbose:
-            print("Results will be saved in: " + self.results_dir + ".")
+        if results_dir is not None:
+            self._validate_and_create_results_dir(results_dir)
+            self.results_dir = results_dir
+            if self.verbose:
+                print("Results will be saved in: " + self.results_dir + ".")
+        else:
+            self.results_dir = None
+            if self.verbose:
+                print(
+                    "Results will not be saved because no results folder has been specified."
+                )
 
         self.analysis_max_step_size_ps = analysis_max_step_size_ps
 
@@ -360,9 +367,18 @@ class MembraneAnalysis:
             name (str): The name of the figure.
 
         """
-        fig.savefig(self.results_dir + name + ".png")
-        if self.verbose:
-            print("Figure saved in: " + self.results_dir + name + ".png")
+        if self.results_dir is None:
+            raise Exception(
+                "No results directory specified. Please specify a results directory to save the figure."
+            )
+        try:
+            fig.savefig(self.results_dir + name + ".png")
+            if self.verbose:
+                print("Figure saved in: " + self.results_dir + name + ".png")
+        except PermissionError:
+            print(
+                "Could not save figure. Permission denied. Please check if the results directory is accessible."
+            )
 
     def __str__(self) -> str:
         return f"MembraneAnalysis object with {self.n_frames} frames analysed."

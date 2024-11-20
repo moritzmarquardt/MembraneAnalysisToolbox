@@ -18,7 +18,7 @@ TODO:
 
 class TestDA(unittest.TestCase):
     def test_hex_transition_count_and_diff_coeff(self):
-        topol_path = "/bigpool/users/ac130484/project/finished_sim/hex/poresize/3nm_NVT/simulation_1/2mus/3/"
+        topol_path = "/bigpool/users/st166545/MembraneAnalysisToolbox/tests/data/hex_box_hex_dod/"
         topol_file_name = "topol.tpr"
         topol_file = topol_path + topol_file_name
         traj_path = topol_path

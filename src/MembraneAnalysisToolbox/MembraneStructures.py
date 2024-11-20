@@ -243,7 +243,7 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
             raise ValueError(
                 "The lower boundary of the cubic structure is not set. Run find_location() first."
             )
-        print(f"Lower boundary of the hexagonal structure: {self.lowerZ}")
+        print(f"Lower boundary of the cubic structure: {self.lowerZ}")
 
     def plot_location(self, trajectories):
         if self.lowerZ is None:

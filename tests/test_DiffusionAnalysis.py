@@ -18,7 +18,7 @@ TODO:
 
 class TestDA(unittest.TestCase):
     def test_hex_transition_count_and_diff_coeff(self):
-        topol_path = "/bigpool/users/ac130484/project/finished_sim/hex/poresize/3nm_NVT/simulation_1/"
+        topol_path = "/bigpool/users/ac130484/project/finished_sim/hex/poresize/3nm_NVT/simulation_1/2mus/3/"
         topol_file_name = "topol.tpr"
         topol_file = topol_path + topol_file_name
         traj_path = topol_path
@@ -48,10 +48,10 @@ class TestDA(unittest.TestCase):
         DA.calc_diffusion("resname HEX and name C1")
         DA.calc_diffusion("resname DOD and name C2")
 
-        self.assertTrue(abs(DA.D["resname HEX and name C1"] - 85.57052641948503) < 1e-3)
-        self.assertTrue(abs(DA.D["resname DOD and name C2"] - 34.61766848107301) < 1e-3)
-        self.assertEqual(DA.n_passages["resname HEX and name C1"], 13190)
-        self.assertEqual(DA.n_passages["resname DOD and name C2"], 4972)
+        self.assertTrue(abs(DA.D["resname HEX and name C1"] - 86.29359025824535) < 1e-3)
+        self.assertTrue(abs(DA.D["resname DOD and name C2"] - 35.88624329954945) < 1e-3)
+        self.assertEqual(DA.n_passages["resname HEX and name C1"], 2611)
+        self.assertEqual(DA.n_passages["resname DOD and name C2"], 913)
         self.assertTrue(232 <= DA.lowerZ <= 234)  # exact: 233.23501586914062
 
 

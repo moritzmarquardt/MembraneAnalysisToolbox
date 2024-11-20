@@ -1,0 +1,1 @@
+This folder contains files that can be used by users to actually run analyses and use the Toolbox. I wanted to have them here antd not in their own repos so they are all in one place and no copies exists.

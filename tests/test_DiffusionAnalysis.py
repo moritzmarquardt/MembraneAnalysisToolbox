@@ -52,7 +52,7 @@ class TestDA(unittest.TestCase):
         self.assertTrue(abs(DA.D["resname DOD and name C2"] - 35.88624329954945) < 1e-3)
         self.assertEqual(DA.n_passages["resname HEX and name C1"], 2611)
         self.assertEqual(DA.n_passages["resname DOD and name C2"], 913)
-        self.assertTrue(232 <= DA.lowerZ <= 234)  # exact: 233.23501586914062
+        self.assertTrue(232 <= DA.membrane.lowerZ <= 234)  # exact: 233.23501586914062
 
 
 if __name__ == "__main__":

@@ -46,21 +46,21 @@ class MembraneForDiffusionAnalysis(Membrane):
         pass
 
 
-class MembraneForPoreSizeAnalysis(Membrane):
+class MembraneForPoreAnalysis(Membrane):
     """
     Define what functions are necessary for a membrane to be used in the effective pore size analysis.
     """
 
     @abstractmethod
-    def _find_zConstraints(self):
+    def find_zConstraints(self):
         pass
 
     @abstractmethod
-    def _find_yConstraints(self):
+    def find_yConstraints(self):
         pass
 
 
-class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreSizeAnalysis):
+class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
     """
     Class for the hexagonal membrane structure.
     It should be able to be used for both the diffusion analysis and the effective pore size analysis.
@@ -167,6 +167,35 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreSizeAnalysi
         self.isAtomBelow = is_below
 
         return is_above, is_below
+
+    def find_zConstraints(self, ratio=0.8):
+        """
+        When given all the atom positions of the membrane, this defines the z-constraints for an effective pore size analysis.
+        It basically takes the minimum and maximum z-coordinate of the membrane atoms and defines the pore size as ratio (default 80%) of the distance between the two.
+        """
+        # z_min = membrane_atom_positions[:, :, 2].min()
+        # z_max = membrane_atom_positions[:, :, 2].max()
+        # z_max = (z_min + z_max) / 2 + (z_max - z_min) / 2 * 0.8
+        # z_min = (z_min + z_max) / 2 - (z_max - z_min) / 2 * 0.8
+        # return z_min, z_max
+        return (
+            self.lowerZ + self.L * (1 - ratio) / 2,
+            self.lowerZ + self.L * (1 + ratio) / 2,
+        )
+
+    def find_yConstraints(self, membrane_atom_positions=None):
+        if (self.y_middle or self.y_range) is None:
+            raise ValueError("The y_middle and y_range attributes are not set.")
+        # y_profile = stats.gaussian_kde(membrane_atom_positions[:,:,1].flatten())
+        # plt.figure()
+        # x = np.linspace(membrane_atom_positions[:,:,1].min(), membrane_atom_positions[:,:,1].max(), 1000)
+        # plt.plot(x, y_profile(x))
+        # plt.plot()
+        # def holefunc(x):
+        #     return x - y_profile(x)
+        # y_middle, y_range = 0, 0
+        # return y_middle, y_range
+        return (self.y_middle, self.y_range)
 
     def __str__(self) -> str:
         attributes = vars(self)

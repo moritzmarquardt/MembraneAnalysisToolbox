@@ -115,8 +115,8 @@ class DiffusionAnalysis(MembraneAnalysis):
         ffs, ffe, ffi = findPassages(T, isAtomAbove, isAtomBelow)
 
         # convert timesteps to ps
-        ffs_ps = ffs * self.u.trajectory.dt * self.nth_frame
-        ffe_ps = ffe * self.u.trajectory.dt * self.nth_frame
+        ffs_ps = ffs * self.step_size
+        ffe_ps = ffe * self.step_size
 
         # store the results
         self.passageTimes[selector] = ffe_ps - ffs_ps
@@ -138,6 +138,9 @@ class DiffusionAnalysis(MembraneAnalysis):
         return passage_distances
 
     def plot_passagetimedist(self, selector: str):
+        """
+        plots the passage time distribution for the given selector in ns
+        """
         if selector not in self.passageTimes.keys():
             raise ValueError(
                 "Passage times for the selector must be calculated before plotting the distribution."

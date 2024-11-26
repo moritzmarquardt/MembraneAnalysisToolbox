@@ -1,6 +1,6 @@
 from typing import Tuple
 
-import cv2 as cv
+import cv2 as cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as optimize
@@ -93,7 +93,7 @@ class PoreAnalysis(MembraneAnalysis):
         skip=50,
         bw="scott",
     ):
-        """same thin as analyseDensity but each selector is normalised on its own and added to the plot"""
+        """same thing as analyseDensity but each selector is normalised on its own and added to the plot"""
         self._allocateTrajectories(selectors)
 
         selectors_positions = []
@@ -271,7 +271,7 @@ class PoreAnalysis(MembraneAnalysis):
 
         plt.figure()
         plt.hist(membrane_atom_positions[:, :, 1].flatten(), bins=100)
-        plt.legend()
+        # plt.legend()
         plt.axvline(x=y_min, color="r", linestyle="--")  # y_min line
         plt.axvline(x=y_max, color="r", linestyle="--")  # y_max line
         plt.title("Histogram for y-axis")

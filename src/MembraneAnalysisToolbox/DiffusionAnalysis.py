@@ -194,18 +194,24 @@ class DiffusionAnalysis(MembraneAnalysis):
         x_cdf = np.linspace(0, x_lim * 2, 200)
         y_hom_cdf = fitfunc_hom_cdf(x_cdf, D, self.membrane.L)
 
-        fig, (ax1, ax2) = plt.subplots(2)
-        fig.suptitle("PDF and CDF fit")
-        ax2.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5], label="CDF data points")
-        ax2.plot(
+        fs = "x-large"
+        figsize = (8, 3)
+
+        fig1 = plt.figure(figsize=figsize)
+        plt.xlabel("Passage time (ns)", fontsize=fs)
+        plt.ylabel("cum. prob.", fontsize=fs)
+        plt.scatter(ecdf.x, ecdf.y, color=[0, 0.5, 0.5], label="cum. prob.")
+        plt.plot(
             x_cdf[1:],
             y_hom_cdf[1:],
-            label="hom",
+            label="FPT fit (hom)",
             color="red",
             ls="dashed",
         )
-        ax2.legend(loc="center right")
-        ax2.set_xlim(0, x_lim)
+        plt.legend(loc="center right", fontsize=fs)
+        plt.xticks(fontsize=fs)
+        plt.xlim(0, x_lim)
+        plt.tight_layout()  # so the axis label is not cut off when saving
 
         # plot PDF
         # PREPARE DATA
@@ -219,13 +225,24 @@ class DiffusionAnalysis(MembraneAnalysis):
         x = x_cdf
         y2 = fitfunc_hom(x, D, self.membrane.L)
 
-        ax1.hist(passage_times, bins=len(center), density=True, color=[0, 0.5, 0.5])
-        ax1.plot(x[1:], y2[1:], label="hom", color="red", ls="dashed")
-        ax1.set_xlim(0, x_lim)
-        ax1.set_ylim(0, 1.2 * np.max(histo[0:]))
-        ax1.legend(loc="center right")
+        fig2 = plt.figure(figsize=figsize)
+        plt.xlabel("Passage time (ns)", fontsize=fs)
+        plt.ylabel("prob. density", fontsize=fs)
+        plt.hist(
+            passage_times,
+            bins=len(center),
+            density=True,
+            color=[0, 0.5, 0.5],
+            label="prob. density",
+        )
+        plt.plot(x[1:], y2[1:], label="FPT fit (hom)", color="red", ls="dashed")
+        plt.xlim(0, x_lim)
+        plt.ylim(0, 1.2 * np.max(histo[0:]))
+        plt.xticks(fontsize=fs)
+        plt.legend(loc="center right", fontsize=fs)
+        plt.tight_layout()
 
-        return fig
+        return fig1, fig2
 
     """
     def bootstrap_diffusion(self, selector, n_bootstraps, plot=True):

@@ -74,8 +74,6 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         lowerZ: float = None,
         isAtomAbove: callable = None,
         isAtomBelow: callable = None,
-        y_middle: float = None,
-        y_range: float = None,
     ):
         if isinstance(selectors, str):
             selectors = [selectors]
@@ -84,35 +82,24 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         self.lowerZ = lowerZ
         self.isAtomAbove = isAtomAbove
         self.isAtomBelow = isAtomBelow
-        self.y_middle = y_middle
-        self.y_range = y_range
 
-    def find_location(self, trajectories):
-        # TODO: Use cdf instead of histogram to avoid binning
+    def find_location(self, membrane_trajectories) -> None:
         """
-        Function to find the lower boundary of the hexagonal structure.
-        Sets the lowerZ attribute, requires the L attribute.
+        Find and set the lower boundary (self.lowerZ) of the hexagonal structure.
+        Requires the L attribute.
+        Only uses the first frame of the trajectory to find the location. Therefore, this only works if the membrane is not moving.
 
         params:
-            trajectories (np.array): The trajectory of the membrane selector atoms
+            membrane_trajectories (np.array): The trajectories of the membrane atoms. Has to be of shape (n_atoms, n_frames, 3).
         """
 
         if self.L is None:
             raise ValueError("The L attribute is not set.")
 
         # Get the z-coordinates of the membrane trajectory
-        z = trajectories[:, 0, 2].flatten()
+        z = membrane_trajectories[:, 0, 2].flatten()
 
-        # Calculate the histogram of the z-coordinates
-        _, bins = np.histogram(z, bins=100, density=True)
-
-        # Calculate the upper and lower bounds of the histogram and with that the middle value
-        z_lower = bins[0]
-        z_upper = bins[-1]
-        z_middle = (z_lower + z_upper) / 2
-
-        # Calculate the lower boundary of the hexagonal structure and return it
-        self.lowerZ = z_middle - self.L / 2
+        self.lowerZ = (min(z) + max(z)) / 2 - self.L / 2
 
     def print_location(self):
         """
@@ -127,24 +114,50 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
 
     def plot_location(self, trajectories):
         """
-        Plot the histogram of the z-coordinates of the membrane selector atoms and the boundaries of the hexagonal structure.
+        Plot the histogram and CDF of the z-coordinates of the membrane selector atoms and the boundaries of the hexagonal structure.
         lowerZ attribute must be set (for example with the find_location function).
+        Only uses the first frame of the trajectory to find the location. Therefore, this only works if the membrane is not moving.
+
+        params:
+            trajectories (np.array): The trajectories of the membrane atoms. Has to be of shape (n_atoms, n_frames, 3).
+
+        returns:
+            fig (matplotlib.figure.Figure): The figure of the plot
         """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the hexagonal structure is not set. Run find_location() first."
             )
-        plt.figure()
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
         z = trajectories[:, 0, 2].flatten()
-        plt.hist(z, bins=50, density=True, label="Histogram")
-        plt.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
-        plt.axvline(
+        # Histogram
+        ax1.hist(z, bins=50, density=True, label="Histogram")
+        ax1.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax1.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        plt.xlabel("z-coordinate")
-        plt.ylabel("Density")
-        plt.title("Histogram of the z-coordinates of the membrane")
-        plt.legend()
+        ax1.set_xlabel("z-coordinate")
+        ax1.set_ylabel("Density")
+        ax1.set_title("Histogram of the z-coordinates of the membrane")
+        ax1.legend()
+
+        # CDF
+        x = np.sort(z)
+        y = np.arange(1, len(x) + 1) / len(x)
+        ax2.plot(x, y, label="CDF", marker="o")
+        ax2.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax2.axvline(
+            self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
+        )
+        ax2.set_xlabel("z-coordinate")
+        ax2.set_ylabel("CDF")
+        ax2.set_title("CDF of the z-coordinates of the membrane")
+        ax2.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+        return fig
 
     def define_isabove_isbelow_funcs(self):
         """
@@ -184,8 +197,18 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         )
 
     def find_yConstraints(self, membrane_atom_positions=None):
-        if (self.y_middle or self.y_range) is None:
-            raise ValueError("The y_middle and y_range attributes are not set.")
+        """
+        When given all the atom positions of the membrane, this defines the y-constraints for an effective pore size analysis.
+        The idea is to find the middle of the pore in the y-direction to define the y-constraints.
+
+        Args:
+            membrane_atom_positions (np.array): The positions of the membrane atoms. Has to be of shape (n_atoms, n_frames, 3).
+
+        Returns:
+            y_middle (float): The middle of the pore in the y-direction
+        """
+        raise NotImplementedError("This function is not implemented yet.")
+        # TODO: Implement this function
         # y_profile = stats.gaussian_kde(membrane_atom_positions[:,:,1].flatten())
         # plt.figure()
         # x = np.linspace(membrane_atom_positions[:,:,1].min(), membrane_atom_positions[:,:,1].max(), 1000)
@@ -195,7 +218,6 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         #     return x - y_profile(x)
         # y_middle, y_range = 0, 0
         # return y_middle, y_range
-        return (self.y_middle, self.y_range)
 
     def __str__(self) -> str:
         attributes = vars(self)
@@ -244,28 +266,20 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         ]
 
     def find_location(self, trajectories):
-        # TODO: Use cdf instead of histogram to avoid binning
         """
-        Function to find the lower boundary of the hexagonal structure
+        Function to find the lower boundary of the cubic structure.
+        Only uses the first frame of the trajectory to find the location. Therefore, this only works if the membrane is not moving.
 
         Args:
-            trajectories (np.array): The trajectory of the membrane selector atoms
+            trajectories (np.array): The trajectory of the membrane selector atoms. Has to be of shape (n_atoms, n_frames, 3)
         """
+        if self.L is None:
+            raise ValueError("The L attribute is not set.")
 
         # Get the z-coordinates of the membrane trajectory
         z = trajectories[:, 0, 2].flatten()
 
-        # Calculate the histogram of the z-coordinates
-        _, bins = np.histogram(z, bins=100, density=True)
-
-        # Calculate the upper and lower bounds of the histogram and with that the middle value
-        z_lower = bins[0]
-        z_upper = bins[-1]
-
-        z_middle = (z_lower + z_upper) / 2
-
-        # Calculate the lower boundary of the cubic structure and return it
-        self.lowerZ = z_middle - self.L / 2
+        self.lowerZ = (min(z) + max(z)) / 2 - self.L / 2
 
     def print_location(self):
         if self.lowerZ is None:
@@ -275,21 +289,51 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         print(f"Lower boundary of the cubic structure: {self.lowerZ}")
 
     def plot_location(self, trajectories):
+        """
+        Plot the histogram and CDF of the z-coordinates of the membrane selector atoms and the boundaries of the cubic structure.
+        lowerZ attribute must be set (for example with the find_location function).
+        Only uses the first frame of the trajectory to find the location. Therefore, this only works if the membrane is not moving.
+
+        params:
+            trajectories (np.array): The trajectories of the membrane atoms. Has to be of shape (n_atoms, n_frames, 3).
+
+        returns:
+            fig (matplotlib.figure.Figure): The figure of the plot
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the cubic structure is not set. Run find_location() first."
             )
-        plt.figure()
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
         z = trajectories[:, 0, 2].flatten()
-        plt.hist(z, bins=100, density=True, label="Histogram")
-        plt.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
-        plt.axvline(
+        # Histogram
+        ax1.hist(z, bins=50, density=True, label="Histogram")
+        ax1.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax1.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        plt.xlabel("z-coordinate")
-        plt.ylabel("Density")
-        plt.title("Histogram of the z-coordinates of the membrane")
-        plt.legend()
+        ax1.set_xlabel("z-coordinate")
+        ax1.set_ylabel("Density")
+        ax1.set_title("Histogram of the z-coordinates of the membrane")
+        ax1.legend()
+
+        # CDF
+        x = np.sort(z)
+        y = np.arange(1, len(x) + 1) / len(x)
+        ax2.plot(x, y, label="CDF", marker="o")
+        ax2.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax2.axvline(
+            self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
+        )
+        ax2.set_xlabel("z-coordinate")
+        ax2.set_ylabel("CDF")
+        ax2.set_title("CDF of the z-coordinates of the membrane")
+        ax2.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+        return fig
 
     def define_isabove_isbelow_funcs(self):
         if self.lowerZ is None:

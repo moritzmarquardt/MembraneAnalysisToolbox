@@ -48,7 +48,7 @@ class MembraneForDiffusionAnalysis(Membrane):
 
 class MembraneForPoreAnalysis(Membrane):
     """
-    Define what functions are necessary for a membrane to be used in the effective pore size analysis.
+    Define what functions are necessary for a membrane to be used in a pore analysis.
     """
 
     @abstractmethod
@@ -65,6 +65,21 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
     Class for the hexagonal membrane structure.
     It should be able to be used for both the diffusion analysis and the effective pore size analysis.
     A hexagonal membrane is characterised by a lower boundary lowerZ and a thickness L.
+
+    Attributes:
+        selectors (list[str]): The selector for the membrane atoms
+        L (float): The thickness of the membrane
+        lowerZ (float): The lower boundary of the membrane
+        isAtomAbove (callable): Function to check if an atom is above the membrane
+        isAtomBelow (callable): Function to check if an atom is below
+
+    Methods:
+        find_location: Find the z-location (z_lower) of the membrane in the simulation box
+        print_location: Print the location of the membrane
+        plot_location: Plot the location of the membrane
+        define_isabove_isbelow_funcs: Define the isAtomAbove and isAtomBelow functions
+        find_zConstraints: Find the z-constraints for the effective pore size analysis
+        find_yConstraints: Find the y-constraints for the effective pore size analysis
     """
 
     def __init__(
@@ -185,12 +200,20 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         """
         When given all the atom positions of the membrane, this defines the z-constraints for an effective pore size analysis.
         It basically takes the minimum and maximum z-coordinate of the membrane atoms and defines the pore size as ratio (default 80%) of the distance between the two.
+        The idea was that when we analyse the pore we only want to look at the inner 80% of the membrane so that we don't get artefacts from the edges.
+
+        Args:
+            ratio (float): The ratio of how much of the distance between the minimum and maximum z-coordinate should be used as the pore.
         """
         # z_min = membrane_atom_positions[:, :, 2].min()
         # z_max = membrane_atom_positions[:, :, 2].max()
         # z_max = (z_min + z_max) / 2 + (z_max - z_min) / 2 * 0.8
         # z_min = (z_min + z_max) / 2 - (z_max - z_min) / 2 * 0.8
         # return z_min, z_max
+        if self.lowerZ is None:
+            raise ValueError(
+                "The lower boundary of the hexagonal structure is not set. Run find_location() first."
+            )
         return (
             self.lowerZ + self.L * (1 - ratio) / 2,
             self.lowerZ + self.L * (1 + ratio) / 2,
@@ -225,10 +248,32 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
             f"{key}={value}" for key, value in attributes.items()
         )
         return f"HexagonalMembrane: {attributes_str}"
-        # return f"HexagonalMembrane: L={self.L}; selector={self.selector}; lowerZ={self.lowerZ}"
 
 
 class CubicMembrane(MembraneForDiffusionAnalysis):
+    """
+    Class for the cubic membrane structure.
+    A cubic membrane is characterised by a lower boundary lowerZ, a thickness L, a cube arrangement (n_x, n_y, n_z), cube size and pore radius.
+
+    Attributes:
+        selectors (list[str]): The selector for the membrane atoms
+        L (float): The thickness of the membrane
+        cube_arrangement (tuple): The arrangement of the cubes in the membrane.
+            The tuple should be of the form (n_x, n_y, n_z) where n_x, n_y, n_z are the number of cubes in the x, y, z direction
+        cube_size (float): The size of one cube
+        pore_radius (float): The radius of the pore
+        lowerZ (float): The lower boundary of the membrane
+        isAtomAbove (callable): Function to check if an atom is above the membrane
+        isAtomBelow (callable): Function to check if an atom is below
+
+    Methods:
+        find_location: Find the z-location (z_lower) of the membrane in the simulation box
+        print_location: Print the location of the membrane
+        plot_location: Plot the location of the membrane
+        define_isabove_isbelow_funcs: Define the isAtomAbove and isAtomBelow functions
+        calc_passage_length: Calculate the passage length of the membrane
+    """
+
     def __init__(
         self,
         selectors: list[str],
@@ -239,14 +284,6 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         isAtomAbove: callable = None,
         isAtomBelow: callable = None,
     ):
-        """
-        Args:
-            selectors (list[str]): The selector for the membrane atoms
-            cube_arrangement (tuple): The arrangement of the cubes in the membrane.
-                The tuple should be of the form (n_x, n_y, n_z) where n_x, n_y, n_z are the number of cubes in the x, y, z direction
-            cube_size (float): The size of one cube
-            pore_radius (float): The radius of the pore
-        """
         if isinstance(selectors, str):
             selectors = [selectors]
         self.selectors = selectors
@@ -282,6 +319,10 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         self.lowerZ = (min(z) + max(z)) / 2 - self.L / 2
 
     def print_location(self):
+        """
+        Print the lower boundary of the cubic structure.
+        lowerZ attribute must be set (for example with the find_location function).
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the cubic structure is not set. Run find_location() first."
@@ -336,6 +377,14 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         return fig
 
     def define_isabove_isbelow_funcs(self):
+        """
+        Define the isAtomAbove and isAtomBelow functions for the cubic structure.
+        lowerZ attribute must be set (for example with the find_location function).
+
+        Returns:
+            is_above (callable): Function to check if an atom is above the membrane
+            is_below (callable): Function to check if an atom is below the membrane
+        """
         if self.lowerZ is None:
             raise ValueError(
                 "The lower boundary of the cubic structure is not set. Run find_location() first."
@@ -456,7 +505,11 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         return spheres_crossed
 
     def __str__(self) -> str:
-        return f"CubicMembrane: L={self.L}; selector={self.selectors}; lowerZ={self.lowerZ}, cube_arrangement={self.cube_arrangement}, cube_size={self.cube_size}"
+        attributes = vars(self)
+        attributes_str = ", \n".join(
+            f"{key}={value}" for key, value in attributes.items()
+        )
+        return f"CubicMembrane: {attributes_str}"
 
 
 class Solvent(MembraneForDiffusionAnalysis):

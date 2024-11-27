@@ -1,6 +1,5 @@
 from typing import Tuple
 
-import cv2 as cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as optimize
@@ -80,9 +79,9 @@ class PoreAnalysis(MembraneAnalysis):
             f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
             fontsize="x-large",
         )
-        plt.xlabel("X-axis in nm", fontsize="x-large")
-        plt.ylabel("Y-axis in nm", fontsize="x-large")
-        plt.pcolormesh(X / 10, Y / 10, Z, shading="gouraud")
+        plt.xlabel("X-axis in Angstrom", fontsize="x-large")
+        plt.ylabel("Y-axis in Angstrom", fontsize="x-large")
+        plt.pcolormesh(X, Y, Z, shading="gouraud")
         plt.colorbar()
         plt.axis("equal")
 
@@ -92,6 +91,7 @@ class PoreAnalysis(MembraneAnalysis):
         z_range,
         skip=50,
         bw="scott",
+        plot=True,
     ):
         """same thing as analyseDensity but each selector is normalised on its own and added to the plot"""
         self._allocateTrajectories(selectors)
@@ -130,16 +130,19 @@ class PoreAnalysis(MembraneAnalysis):
         Z_list = [Z / max_Z[i] for i, Z in enumerate(Z_list)]
         Z = sum(Z_list)
 
-        plt.figure()
-        plt.title(
-            f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
-            fontsize="x-large",
-        )
-        plt.xlabel("X-axis in nm", fontsize="x-large")
-        plt.ylabel("Y-axis in nm", fontsize="x-large")
-        plt.pcolormesh(X / 10, Y / 10, Z, shading="gouraud")
-        plt.colorbar()
-        plt.axis("equal")
+        if plot:
+            plt.figure()
+            plt.title(
+                f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
+                fontsize="x-large",
+            )
+            plt.xlabel("X-axis in Angstrom", fontsize="x-large")
+            plt.ylabel("Y-axis in Angstrom", fontsize="x-large")
+            plt.pcolormesh(X, Y, Z, shading="gouraud")
+            plt.colorbar()
+            plt.axis("equal")
+
+        return Z
 
     def calculateEffectivePoreSize(
         self,
@@ -209,6 +212,7 @@ class PoreAnalysis(MembraneAnalysis):
         z_constraints: Tuple[float, float],
         x_threshold: Tuple[float, float],
         y_threshold: Tuple[float, float],
+        radius: float,
         skip: int = 50,
         bw="scott",
     ):
@@ -241,11 +245,53 @@ class PoreAnalysis(MembraneAnalysis):
 
         kde = gaussian_kde(filtered_positions.T, bw_method=bw)
         Z = np.reshape(kde([X.ravel(), Y.ravel()]), X.shape)
+        Z = Z / np.max(Z)
 
+        def circle_area_integral(m_x, m_y, r):
+            # mask after distance to center
+            rows, cols = Z.shape
+            # Create a grid of coordinates relative to (x, y)
+            y_grid, x_grid = np.ogrid[:rows, :cols]
+            # Calculate squared distance from (x, y)
+            dist_squared = (x_grid - m_x) ** 2 + (y_grid - m_y) ** 2
+            # Create a mask for points within radius r
+            circular_mask = dist_squared <= r**2
+            # Sum the values in the circle
+            sum = np.sum(np.ma.masked_where(~circular_mask, Z))
+
+            return sum
+
+        # Define the function to be minimized
+        def objective(params):
+            m_x, m_y = params
+            return circle_area_integral(m_x, m_y, radius)
+
+        print("lets minimize")
+        # Perform the optimization, dual annealing is a global optimization algorithm
+        bounds = [
+            (0, Z.shape[1]),
+            (0, Z.shape[0]),
+        ]  # indexing is reverted because of the way the grid is created
+        print(bounds)
+        result = optimize.dual_annealing(objective, bounds=bounds)
+        print(result)
+
+        # Extract the optimal parameters. reverted indexing because of the way the grid is created (in an image science way)
+        m_y_opt, m_x_opt = result.x
+
+        print("Optimal m_x:", m_x_opt)
+        print("Optimal m_y:", m_y_opt)
+
+        # Plot the histogram and optimal circle
         plt.figure()
-        plt.xlabel("X-axis in nm", fontsize="x-large")
-        plt.ylabel("Y-axis in nm", fontsize="x-large")
-        plt.imshow(Z, extent=(xmin, xmax, ymin, ymax), origin="lower")
+        plt.imshow(Z, origin="lower")
+        plt.axis("equal")
+        plt.colorbar()
+        circle = plt.Circle((m_y_opt, m_x_opt), radius, color="r", fill=False)
+        plt.gca().add_artist(circle)
+        plt.show()
+
+        return m_x_opt + x_threshold[0], m_y_opt + y_threshold[0]
 
     def radialDensityFunction(self, resnames):
         pass

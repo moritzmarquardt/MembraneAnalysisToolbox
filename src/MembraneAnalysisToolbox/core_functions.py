@@ -88,6 +88,7 @@ def findPassagesHexOptimised(T, lowerBound, upperBound) -> tuple:
     find passage times, optimised and vectorised for hexagonal membranes
     optimised in the case that p=1 and p_middle=1
     """
+    raise NotImplementedError("This function is not fully implemented and tested yet")
     z_Trajs = T[:, :, 2]
     inside = (z_Trajs > lowerBound) & (z_Trajs < upperBound)
     diff = np.diff(inside, axis=1)
@@ -110,7 +111,8 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
         to compensate uncontinuous behavior (see documentation for more details). Defaults to 1.
         p_middle (int, optional): timesteps, that an object has to be in the middle to
         be seen as passaging through the middel. 3 means, the object has to be in
-        the middle for 3 timesteps to be counted as a valid transition. Defaults to 1.
+        the middle for 3 timesteps to be counted as a valid transition. Defaults to 1 because it is the
+        most basic definition of a transition.
 
     Returns:
         _type_: flip start und end times in an array and the indizes of the S file which

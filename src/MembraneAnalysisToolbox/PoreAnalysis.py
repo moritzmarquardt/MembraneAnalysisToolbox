@@ -3,7 +3,6 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.optimize as optimize
-import skimage as ski
 from scipy.stats import gaussian_kde
 
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis

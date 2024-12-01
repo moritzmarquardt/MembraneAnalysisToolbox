@@ -9,6 +9,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from MembraneAnalysisToolbox.core_functions import (
     calculate_diffusion,
     findPassages,
+    findPassagesHexOptimised,
     fitfunc_hom,
     fitfunc_hom_cdf,
     save_1darr_to_txt,
@@ -93,8 +94,8 @@ class DiffusionAnalysis(MembraneAnalysis):
             f"      n_frames analysed: {self.n_frames}\n"
             f"      ana_sim_time (ps): {(self.n_frames - 1) * self.step_size}\n"
             f"      u: {self.u}\n"
-            f"      unique atom names: {set(atom.name for atom in self.u.atoms)}\n"
-            f"      unique tyep: {set(res.resname for res in self.u.residues)}\n"
+            f"      unique atom-names: {set(atom.name for atom in self.u.atoms)}\n"
+            f"      unique resnames: {set(res.resname for res in self.u.residues)}\n"
             f"      unique combinations: {set((atom.resname, atom.name) for atom in self.u.atoms)}\n"
         )
 
@@ -112,6 +113,12 @@ class DiffusionAnalysis(MembraneAnalysis):
         isAtomAbove, isAtomBelow = self.membrane.define_isabove_isbelow_funcs()
 
         T = self.trajectories[selector]
+        # if isinstance(self.membrane, HexagonalMembrane):
+        #     ffs, ffe, ffi = findPassagesHexOptimised(
+        #         T, self.membrane.lowerZ, self.membrane.upperZ
+        #     )
+        # else:
+        #     ffs, ffe, ffi = findPassages(T, isAtomAbove, isAtomBelow)
         ffs, ffe, ffi = findPassages(T, isAtomAbove, isAtomBelow)
 
         # convert timesteps to ps

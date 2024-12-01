@@ -83,6 +83,20 @@ def path_cat(X, Y, ffs, ffe):
     return d.astype(int)
 
 
+def findPassagesHexOptimised(T, lowerBound, upperBound) -> tuple:
+    """
+    find passage times, optimised and vectorised for hexagonal membranes
+    optimised in the case that p=1 and p_middle=1
+    """
+    z_Trajs = T[:, :, 2]
+    inside = (z_Trajs > lowerBound) & (z_Trajs < upperBound)
+    diff = np.diff(inside, axis=1)
+    ffs = np.where(diff == 1) - 1
+    ffe = np.where(diff == -1) + 1
+    ffi = np.zeros(ffs[0].size)  # TODO: implement
+    return ffe, ffe, ffi
+
+
 def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
     """measure start and endpoint of passages through the bounds.
     returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)

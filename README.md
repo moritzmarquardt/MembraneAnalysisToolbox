@@ -21,8 +21,5 @@ MembraneAnalysisToolbox is developed using python 3.12 and installing it require
 2) Run `pip install [path to package]` in your python environment
 
 ## Usage
-- In `usage/` you can find a collection of ready-to-run python scripts for different analyses and a how to use in `usage/README.md`.
-
-- Look at `examples/` to see how the classes are imported and used if you want to write your own code.
-
-- Check out the `best_practice.pdf` for some best practices on using this package.
+- Look at `examples/` to see how the package can be used if you want to write your own code. 
+- This python package was used for a publication on nanoporous carbon materials. Find the code and how the package was used for the paper here: [https://github.com/moritzmarquardt/carbon_paper_MAT](https://github.com/moritzmarquardt/carbon_paper_MAT). 

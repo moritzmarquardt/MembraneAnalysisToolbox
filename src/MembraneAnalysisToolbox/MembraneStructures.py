@@ -550,4 +550,8 @@ class Solvent(MembraneForDiffusionAnalysis):
         return is_above, is_below
 
     def __str__(self) -> str:
-        return "Solvent: No membrane present"
+        attributes = vars(self)
+        attributes_str = ", \n".join(
+            f"{key}={value}" for key, value in attributes.items()
+        )
+        return f"Solvent: {attributes_str}"

@@ -3,7 +3,7 @@
 The MembraneAnalysisToolbox is a python package than can be installed in a python environment via pip.
 
 This toolbox contains methods for analysing molecular dynamics simulation data of Membranes.
-It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing metal organic frameworks and their properties. This Toolbox also uses work by Gotthold Fläschner.
+It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing nanoporous carbon materials and their properties. However due to the modular and object oriented structure, it may be used or extended for other projects and the analysis of all kinds of membranes in molecular dynamics simulations.
 
 ## Main Components:
 - TransitionPathAnalysis class with the following key features:
@@ -11,7 +11,7 @@ It has been developed in the group of Kristyna Pluhackova at the University of S
     - Calculate the **diffusion coefficient** for a solvent
 - EffectivePoreSizeAnalysis class with the following key features:
     - Analyse the **effective pore radius** of a membrane pore
-    - Analyse the density of molecules in the pore using kernels for a **density heatmap**
+    - Analyse the density of molecules in the pore using kernel methods for a **density heatmap**
 
 
 ## Installation:
@@ -23,3 +23,6 @@ MembraneAnalysisToolbox is developed using python 3.12 and installing it require
 ## Usage
 - Look at `examples/` to see how the package can be used if you want to write your own code. 
 - This python package was used for a publication on nanoporous carbon materials. Find the code and how the package was used for the paper here: [https://github.com/moritzmarquardt/carbon_paper_MAT](https://github.com/moritzmarquardt/carbon_paper_MAT). 
+
+## Acknowledgement
+This Toolbox uses work by Gotthold Fläschner.

@@ -73,7 +73,7 @@ class PoreAnalysis(MembraneAnalysis):
         y = np.linspace(ymin, ymax, yn)
         X, Y = np.meshgrid(x, y)
         Z = np.reshape(kde([X.ravel(), Y.ravel()]), X.shape)
-        plt.figure()
+        fig = plt.figure()
         plt.title(
             f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
             fontsize="x-large",
@@ -83,6 +83,7 @@ class PoreAnalysis(MembraneAnalysis):
         plt.pcolormesh(X, Y, Z, shading="gouraud")
         plt.colorbar()
         plt.axis("equal")
+        return Z, fig
 
     def analyseDensityNormed(
         self,
@@ -90,7 +91,6 @@ class PoreAnalysis(MembraneAnalysis):
         z_range,
         skip=50,
         bw="scott",
-        plot=True,
     ):
         """same thing as analyseDensity but each selector is normalised on its own and added to the plot"""
         self._allocateTrajectories(selectors)
@@ -129,19 +129,18 @@ class PoreAnalysis(MembraneAnalysis):
         Z_list = [Z / max_Z[i] for i, Z in enumerate(Z_list)]
         Z = sum(Z_list)
 
-        if plot:
-            plt.figure()
-            plt.title(
-                f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
-                fontsize="x-large",
-            )
-            plt.xlabel("X-axis in Angstrom", fontsize="x-large")
-            plt.ylabel("Y-axis in Angstrom", fontsize="x-large")
-            plt.pcolormesh(X, Y, Z, shading="gouraud")
-            plt.colorbar()
-            plt.axis("equal")
+        fig = plt.figure()
+        plt.title(
+            f"Density of {selectors} in the Z-range {int(z_range[0])} to {int(z_range[1])}",
+            fontsize="x-large",
+        )
+        plt.xlabel("X-axis in Angstrom", fontsize="x-large")
+        plt.ylabel("Y-axis in Angstrom", fontsize="x-large")
+        plt.pcolormesh(X, Y, Z, shading="gouraud")
+        plt.colorbar()
+        plt.axis("equal")
 
-        return Z
+        return Z, fig
 
     def calculateEffectivePoreSize(
         self,
@@ -196,7 +195,7 @@ class PoreAnalysis(MembraneAnalysis):
             strategy=strategy,
         )
 
-        self.plotEffectivePoreSize(
+        fig = self.plotEffectivePoreSize(
             membrane_hist,
             membrane_hist_edges,
             solvent_hist,
@@ -204,7 +203,7 @@ class PoreAnalysis(MembraneAnalysis):
             pore_edges,
         )
 
-        return (pore_edges[0], pore_edges[1])
+        return (pore_edges[0], pore_edges[1]), fig
 
     def findPoreCenter(
         self,
@@ -308,29 +307,33 @@ class PoreAnalysis(MembraneAnalysis):
         y_min, y_max = y_constraints
         z_min, z_max = z_constraints
         membrane_atom_positions = self.trajectories[membrane_selector]
-        plt.figure()
-        plt.hist(membrane_atom_positions[:, :, 0].flatten())
-        plt.title("Histogram for x-axis")
-        plt.xlabel("X-axis in Angstroms")
-        plt.ylabel("Frequency")
 
-        plt.figure()
-        plt.hist(membrane_atom_positions[:, :, 1].flatten(), bins=100)
-        # plt.legend()
-        plt.axvline(x=y_min, color="r", linestyle="--")  # y_min line
-        plt.axvline(x=y_max, color="r", linestyle="--")  # y_max line
-        plt.title("Histogram for y-axis")
-        plt.xlabel("X-axis in Angstroms")
-        plt.ylabel("Frequency")
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
 
-        plt.figure()
-        plt.hist(membrane_atom_positions[:, :, 2].flatten(), bins=100)
-        plt.axvline(x=z_min, color="r", linestyle="--")  # z_min line
-        plt.axvline(x=z_max, color="r", linestyle="--")  # z_max line
-        plt.title("Histogram for z-axis")
-        plt.xlabel("X-axis in Angstroms")
-        plt.ylabel("Frequency")
-        # plt.show()
+        axs[0, 0].hist(membrane_atom_positions[:, :, 0].flatten())
+        axs[0, 0].set_title("Histogram for x-axis")
+        axs[0, 0].set_xlabel("X-axis in Angstroms")
+        axs[0, 0].set_ylabel("Frequency")
+
+        axs[0, 1].hist(membrane_atom_positions[:, :, 1].flatten(), bins=100)
+        axs[0, 1].axvline(x=y_min, color="r", linestyle="--")  # y_min line
+        axs[0, 1].axvline(x=y_max, color="r", linestyle="--")  # y_max line
+        axs[0, 1].set_title("Histogram for y-axis")
+        axs[0, 1].set_xlabel("Y-axis in Angstroms")
+        axs[0, 1].set_ylabel("Frequency")
+
+        axs[1, 0].hist(membrane_atom_positions[:, :, 2].flatten(), bins=100)
+        axs[1, 0].axvline(x=z_min, color="r", linestyle="--")  # z_min line
+        axs[1, 0].axvline(x=z_max, color="r", linestyle="--")  # z_max line
+        axs[1, 0].set_title("Histogram for z-axis")
+        axs[1, 0].set_xlabel("Z-axis in Angstroms")
+        axs[1, 0].set_ylabel("Frequency")
+
+        # Leave the last subplot empty
+        axs[1, 1].axis("off")
+
+        plt.tight_layout()
+        return fig
 
     def _calculate_pore_edges(
         self,
@@ -420,7 +423,7 @@ class PoreAnalysis(MembraneAnalysis):
         """
         lower_edge, upper_edge = edges
 
-        plt.figure()
+        fig = plt.figure()
         x = np.linspace(membrane_hist_edges[0], membrane_hist_edges[-1], 1000)
         plt.plot(
             x / 10,
@@ -442,6 +445,7 @@ class PoreAnalysis(MembraneAnalysis):
         plt.grid(True)
         plt.legend(fontsize="large")
         # plt.show()
+        return fig
 
     @staticmethod
     def hist_linear_interpol_eval(x, hist_edges, hist):

@@ -413,4 +413,4 @@ class DiffusionAnalysis(MembraneAnalysis):
         # Add color bar
         cbar = fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
         cbar.set_label("z-value (nm)", fontsize="x-large")
-        return fig, ax
+        return fig

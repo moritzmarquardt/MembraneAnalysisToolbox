@@ -181,9 +181,8 @@ class MembraneAnalysis:
 
             # Convert the list of trajectories to a NumPy array
             combined_trajectories = np.concatenate(combined_trajectories, axis=0)
-            self.membrane.plot_location(combined_trajectories)
-
-            # self.membrane.plot_location(self.trajectories[self.membrane.selectors])
+            fig = self.membrane.plot_location(combined_trajectories)
+            return fig
 
     @staticmethod
     def _validate_file_extension(path: str, extension: str) -> bool:

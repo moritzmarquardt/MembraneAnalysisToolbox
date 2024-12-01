@@ -1,25 +1,18 @@
 import json
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import least_squares
 from statsmodels.distributions.empirical_distribution import ECDF
 
 from MembraneAnalysisToolbox.core_functions import (
     calculate_diffusion,
     findPassages,
-    findPassagesHexOptimised,
     fitfunc_hom,
     fitfunc_hom_cdf,
     save_1darr_to_txt,
 )
 from MembraneAnalysisToolbox.MembraneAnalysis import MembraneAnalysis
-from MembraneAnalysisToolbox.MembraneStructures import (
-    HexagonalMembrane,
-    Membrane,
-    MembraneForDiffusionAnalysis,
-)
+from MembraneAnalysisToolbox.MembraneStructures import MembraneForDiffusionAnalysis
 
 
 class DiffusionAnalysis(MembraneAnalysis):
@@ -254,84 +247,80 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         return fig1, fig2
 
-    """
-    def bootstrap_diffusion(self, selector, n_bootstraps, plot=True):
-        # first do the bootstrapping for only one element
-        if not isinstance(selector, str):
-            raise ValueError("Selector must be a string.")
+    # def bootstrap_diffusion(self, selector, n_bootstraps, plot=True):
+    #     # first do the bootstrapping for only one element
+    #     if not isinstance(selector, str):
+    #         raise ValueError("Selector must be a string.")
 
-        self._allocateTrajectories(selector)
-        bootstrap_pieces = np.array_split(
-            self.trajectories[selector][:, :, 2], n_bootstraps, axis=0
-        )  # idk if this works
-        # print(bootstrap_pieces)
-        # print(bootstrap_pieces[0].shape)
-        bootstrap_diffusions = np.zeros(n_bootstraps)
-        for i, piece in enumerate(bootstrap_pieces):
-            ffs, ffe, _ = dur_dist_improved(
-                piece, [self.z_lower, self.z_lower + self.membrane.L]
-            )
-            bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs)
-            if plot:
-                self.plot_diffusion(ffe - ffs, bootstrap_diffusions[i])
-        return bootstrap_diffusions
+    #     self._allocateTrajectories(selector)
+    #     bootstrap_pieces = np.array_split(
+    #         self.trajectories[selector][:, :, 2], n_bootstraps, axis=0
+    #     )  # idk if this works
+    #     # print(bootstrap_pieces)
+    #     # print(bootstrap_pieces[0].shape)
+    #     bootstrap_diffusions = np.zeros(n_bootstraps)
+    #     for i, piece in enumerate(bootstrap_pieces):
+    #         ffs, ffe, _ = dur_dist_improved(
+    #             piece, [self.z_lower, self.z_lower + self.membrane.L]
+    #         )
+    #         bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs)
+    #         if plot:
+    #             self.plot_diffusion(ffe - ffs, bootstrap_diffusions[i])
+    #     return bootstrap_diffusions
 
-    def bootstrapping_diffusion(
-        self, selector, bootstrap_sample_length_ns, n_bootstraps, z_lower, L, plot=True
-    ):
-        if not isinstance(selector, str):
-            raise ValueError("Selector must be a string.")
+    # def bootstrapping_diffusion(
+    #     self, selector, bootstrap_sample_length_ns, n_bootstraps, z_lower, L, plot=True
+    # ):
+    #     if not isinstance(selector, str):
+    #         raise ValueError("Selector must be a string.")
 
-        self._allocateTrajectories(selector)
+    #     self._allocateTrajectories(selector)
 
-        bootstrap_sample_length = bootstrap_sample_length_ns * 1000  # convert to ps
-        bootstrap_sample_length /= self.u.trajectory.dt  # convert to frames
-        bootstrap_sample_length /= self.nth  # convert to steps in the analysis
-        bootstrap_sample_length = int(bootstrap_sample_length)  # convert to int
+    #     bootstrap_sample_length = bootstrap_sample_length_ns * 1000  # convert to ps
+    #     bootstrap_sample_length /= self.u.trajectory.dt  # convert to frames
+    #     bootstrap_sample_length /= self.nth  # convert to steps in the analysis
+    #     bootstrap_sample_length = int(bootstrap_sample_length)  # convert to int
 
-        bootstrap_diffusions = np.zeros(n_bootstraps)
-        rg = (
-            np.random.default_rng()
-        )  # this is numpys new state of the art random number generator routine according to their docs
-        if self.verbose:
-            print(
-                f"Bootstrapping for {n_bootstraps} samples of length {bootstrap_sample_length} steps = {bootstrap_sample_length_ns}ns."
-            )
-        for i in range(n_bootstraps):
-            sample_start_index = rg.integers(
-                0, self.timesteps - bootstrap_sample_length
-            )
-            # print(i, sample_start_index)
-            progress = int(i / n_bootstraps * 100)
-            if self.verbose:
-                sys.stdout.write(f"\r\tProgress: {progress}%")
-                sys.stdout.flush()
-            sample = self.trajectories[selector][
-                :, sample_start_index : sample_start_index + bootstrap_sample_length, 2
-            ]
-            try:
-                ffs, ffe, _ = dur_dist_improved(sample, [z_lower, z_lower + L])
-                bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, L, plot=plot)
-            except Exception as e:
-                print(e)
-                bootstrap_diffusions[i] = np.nan
+    #     bootstrap_diffusions = np.zeros(n_bootstraps)
+    #     rg = (
+    #         np.random.default_rng()
+    #     )  # this is numpys new state of the art random number generator routine according to their docs
+    #     if self.verbose:
+    #         print(
+    #             f"Bootstrapping for {n_bootstraps} samples of length {bootstrap_sample_length} steps = {bootstrap_sample_length_ns}ns."
+    #         )
+    #     for i in range(n_bootstraps):
+    #         sample_start_index = rg.integers(
+    #             0, self.timesteps - bootstrap_sample_length
+    #         )
+    #         # print(i, sample_start_index)
+    #         progress = int(i / n_bootstraps * 100)
+    #         if self.verbose:
+    #             sys.stdout.write(f"\r\tProgress: {progress}%")
+    #             sys.stdout.flush()
+    #         sample = self.trajectories[selector][
+    #             :, sample_start_index : sample_start_index + bootstrap_sample_length, 2
+    #         ]
+    #         try:
+    #             ffs, ffe, _ = dur_dist_improved(sample, [z_lower, z_lower + L])
+    #             bootstrap_diffusions[i] = self.calc_diffusion(ffe - ffs, L, plot=plot)
+    #         except Exception as e:
+    #             print(e)
+    #             bootstrap_diffusions[i] = np.nan
 
-        if self.verbose:
-            print("\nBootstrapping finished.")
+    #     if self.verbose:
+    #         print("\nBootstrapping finished.")
 
-        return bootstrap_diffusions
-    """
+    #     return bootstrap_diffusions
 
-    def store_results_json(self):
+    def store_results_json(self, filename: str = "diffusion_analysis_results"):
         out = {
             "D": self.D,
             "n_passages": self.n_passages,
             "membrane": str(self.membrane),
         }
         # print(out)
-        self._store_dict_as_json(
-            out, self.results_dir + "diffusion_analysis_results.json"
-        )
+        self._store_dict_as_json(out, self.results_dir + filename + ".json")
 
     def save_passage_times_in_ns_to_txt(self, selector: str, file_name: str):
         if not file_name.endswith(".txt"):

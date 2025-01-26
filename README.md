@@ -1,9 +1,9 @@
 # Membrane Analysis Toolbox
 
-The MembraneAnalysisToolbox is a python package than can be installed in a python environment via pip.
+The MembraneAnalysisToolbox is a Python package than can be installed in a python environment via pip.
 
 This toolbox contains methods for analysing molecular dynamics simulation data of Membranes.
-It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing nanoporous carbon materials and their properties. However due to the modular and object oriented structure, it may be used or extended for other projects and the analysis of all kinds of membranes in molecular dynamics simulations.
+It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing nanoporous carbon materials (NCMs) and their properties. However due to the modular and object oriented structure, it may be used or extended for other projects and the analysis of all kinds of membranes in molecular dynamics simulations.
 
 ## Main Components:
 - TransitionPathAnalysis class with the following key features:

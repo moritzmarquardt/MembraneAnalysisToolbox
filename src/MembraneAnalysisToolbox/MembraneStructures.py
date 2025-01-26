@@ -533,9 +533,42 @@ class Solvent(MembraneForDiffusionAnalysis):
             f"Solvent system with virtual borders at z={self.lowerZ} and z={self.upperZ}"
         )
 
-    def plot_location(self):
-        # TODO plot the distribution of the solvent atoms and the defined borders
-        pass
+    def plot_location(self, trajectories):
+        """
+        plot the distribution of the solvent atoms and the defined borders.
+
+        Args:
+            trajectories (np.array): The trajectories of the solvent atoms. Has to be of shape (n_atoms, n_frames, 3).
+
+        Returns:
+            fig (matplotlib.figure.Figure): The figure of the plot
+        """
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+        z = trajectories[:, 0, 2].flatten()
+        # Histogram
+        ax1.hist(z, bins=50, density=True, label="Histogram")
+        ax1.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax1.axvline(self.upperZ, color="r", linestyle="--", label="Upper boundary")
+        ax1.set_xlabel("z-coordinate")
+        ax1.set_ylabel("Density")
+        ax1.set_title("Histogram of the z-coordinates of the solvent")
+        ax1.legend()
+
+        # CDF
+        x = np.sort(z)
+        y = np.arange(1, len(x) + 1) / len(x)
+        ax2.plot(x, y, label="CDF", marker="o")
+        ax2.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
+        ax2.axvline(self.upperZ, color="r", linestyle="--", label="Upper boundary")
+        ax2.set_xlabel("z-coordinate")
+        ax2.set_ylabel("CDF")
+        ax2.set_title("CDF of the z-coordinates of the solvent")
+        ax2.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+        return fig
 
     def define_isabove_isbelow_funcs(self):
         def is_above(curr):

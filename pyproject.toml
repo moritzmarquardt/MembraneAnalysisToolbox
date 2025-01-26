@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "MembraneAnalysisToolbox"
-version = "2024.12.1"
+version = "2025.01.26"
 authors = [
   { name="Moritz Marquardt", email="moritz.g.marquardt@gmail.com" },
 ]

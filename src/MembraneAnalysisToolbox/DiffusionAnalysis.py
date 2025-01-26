@@ -385,7 +385,26 @@ class DiffusionAnalysis(MembraneAnalysis):
             )  # end point
         return fig, ax
 
-    # TODO: implement this function correctly
+    def plot_z_passages(self, selector: str, pos):
+        plt.figure()
+        index = self.passageIndices[selector][pos]
+        start = int(self.passageStarts[selector][pos])
+        end = int(start + self.passageTimes[selector][pos])
+        start_index = int(start / self.step_size)
+        end_index = int(end / self.step_size) + 1
+        print(start_index, end_index)
+        print(start, end)
+        print(self.trajectories[selector][index, start:end, 2])
+        print(self.trajectories[selector][index, start:end, 2].shape)
+        plt.plot(
+            self.trajectories[selector][index, start_index:end_index, 2],
+            label=f"Passage {pos}",
+        )
+        plt.xlabel("Time in ps")
+        plt.ylabel("z in A")
+        plt.title("Trajectories of the selected passages")
+        plt.plot()
+
     def plot_starting_points(self, selector: str):
         res = selector.split(" ")[1]
         fig = plt.figure("plotten aller Startpunkte")
@@ -409,7 +428,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             c=z_passages[np.arange(np.size(x_passages, 0)), ffs + 1] / 10,
             cmap="viridis",
         )
-        # ugly way of getting the point. maybe there is a better way"""
+        # TODO ugly way of getting the point. maybe there is a better way
         # Add color bar
         cbar = fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
         cbar.set_label("z-value (nm)", fontsize="x-large")

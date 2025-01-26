@@ -157,6 +157,13 @@ class DiffusionAnalysis(MembraneAnalysis):
         return fig, ax
 
     def calc_diffusion(self, selector: str):
+        """
+        Calculates the diffusion coefficient for the given selector.
+        The diffusion coefficient is stored in self.D[selector].
+
+        Args:
+            selector (str): The selector to calculate the diffusion coefficient for.
+        """
         if self.membrane.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
@@ -172,6 +179,21 @@ class DiffusionAnalysis(MembraneAnalysis):
         self.D[selector] = calculate_diffusion(self.membrane.L, passage_times)
 
     def plot_diffusion(self, selector: str):
+        """
+        Plot the Diffusion FPT fit for the given selector.
+
+        Args:
+            selector (str): The selector to plot the diffusion fit for.
+
+        Returns:
+            fig1 (matplotlib.figure.Figure): The figure with the CDF plot.
+            fig2 (matplotlib.figure.Figure): The figure with the PDF plot.
+
+        Raises:
+            ValueError: If the membrane length has not been set.
+            ValueError: If the passage times for the selector have not been calculated.
+            ValueError: If the diffusion coefficient for the selector has not been calculated
+        """
         if self.membrane.L is None:
             raise ValueError(
                 "L must be set before calculating the diffusion coefficient."
@@ -314,6 +336,13 @@ class DiffusionAnalysis(MembraneAnalysis):
     #     return bootstrap_diffusions
 
     def store_results_json(self, filename: str = "diffusion_analysis_results"):
+        """
+        Store the results of the diffusion analysis in a json file.
+        Will be saved in the results directory.
+
+        Args:
+            filename (str): The name of the json file to store the results in.
+        """
         out = {
             "D": self.D,
             "n_passages": self.n_passages,
@@ -323,6 +352,13 @@ class DiffusionAnalysis(MembraneAnalysis):
         self._store_dict_as_json(out, self.results_dir + filename + ".json")
 
     def save_passage_times_in_ns_to_txt(self, selector: str, file_name: str):
+        """
+        Save the passage times in ns to a txt file in the results directory.
+
+        Args:
+            selector (str): The selector to save the passage times for.
+            file_name (str): The name of the txt file to save the passage times in.
+        """
         if not file_name.endswith(".txt"):
             raise ValueError("File name must end with .txt.")
         save_1darr_to_txt(
@@ -337,6 +373,10 @@ class DiffusionAnalysis(MembraneAnalysis):
 
     # TODO implement this function correctly
     def create_rand_passages_plot(self, selector: str, n: int) -> tuple:
+        """
+        Create a plot of n random passages for the given selector.
+        This can be used to randomly validate the passage detection.
+        """
         self._allocateTrajectories(selector)
 
         fig = plt.figure("3d trajektorien")
@@ -386,6 +426,13 @@ class DiffusionAnalysis(MembraneAnalysis):
         return fig, ax
 
     def plot_z_passages(self, selector: str, pos):
+        """
+        Plot the z-trajectories of the selected passage pos of the selector.
+
+        Args:
+            selector (str): The selector to plot the z-trajectories for.
+            pos (int): which one of the passages of the specific selector to plot
+        """
         plt.figure()
         index = self.passageIndices[selector][pos]
         start = int(self.passageStarts[selector][pos])
@@ -406,6 +453,16 @@ class DiffusionAnalysis(MembraneAnalysis):
         plt.plot()
 
     def plot_starting_points(self, selector: str):
+        """
+        Plot the starting points of the passages for the given selector.
+        This is helpful to see if the passages are detected correctly.
+
+        Args:
+            selector (str): The selector to plot the starting points for.
+
+        Returns:
+            fig (matplotlib.figure.Figure): The figure with the starting points.
+        """
         res = selector.split(" ")[1]
         fig = plt.figure("plotten aller Startpunkte")
         ax = fig.add_subplot(projection="3d")
@@ -416,6 +473,7 @@ class DiffusionAnalysis(MembraneAnalysis):
             "Membrane-entry points of the passage-trajectories (" + res.upper() + ")",
             fontsize="x-large",
         )
+        # TODO check if the passages are already calculated
         x_passages = self.trajectories[selector][self.passageIndices[selector], :, 0]
         y_passages = self.trajectories[selector][self.passageIndices[selector], :, 1]
         z_passages = self.trajectories[selector][self.passageIndices[selector], :, 2]
@@ -429,7 +487,6 @@ class DiffusionAnalysis(MembraneAnalysis):
             cmap="viridis",
         )
         # TODO ugly way of getting the point. maybe there is a better way
-        # Add color bar
         cbar = fig.colorbar(scatter, ax=ax, shrink=0.5, aspect=5)
         cbar.set_label("z-value (nm)", fontsize="x-large")
         return fig

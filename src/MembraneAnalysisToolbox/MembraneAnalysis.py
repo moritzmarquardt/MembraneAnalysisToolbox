@@ -30,6 +30,16 @@ class MembraneAnalysis:
         verbose (bool, optional): Whether to print verbose output. Defaults to True.
 
     Methods:
+        find_membrane_location():
+            Find the location of the membrane if it is not a solvent.
+            It calls the find_location method of the membrane object using the membrane trajectories.
+
+        print_membrane_location():
+            Print the location of the membrane.
+
+        verify_membrane_location():
+            Verify the location of the membrane by plotting it.
+
         _validate_file_extension(path: str, extension: str) -> bool:
             This is used to check if a file exists and has the correct file extension.
 
@@ -50,9 +60,6 @@ class MembraneAnalysis:
 
         save_fig_to_results(fig, name: str):
             Save a figure to the results directory.
-
-        find_membrane_location_hexstructure(mem_selector: str, L: float) -> float:
-            Find the lower boundary of the membrane in a hexagonal structure.
 
         __str__() -> str:
             Return a string representation of the object.
@@ -167,6 +174,10 @@ class MembraneAnalysis:
         self.membrane.print_location()
 
     def verify_membrane_location(self):
+        """
+        Plot the location of the membrane to verify it.
+        Uses the plot_location method of the membrane object.
+        """
         if isinstance(self.membrane, Solvent):
             raise Exception(
                 "Solvent does not have a membrane. Do not call verify_membrane_location when analysing solvents."

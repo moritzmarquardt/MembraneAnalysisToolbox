@@ -8,30 +8,30 @@ but can also be used standalone as imported functions
 """
 
 
-def calc_hor_dist(x_traj, y_traj, ffs, ffe):
-    """calculate the horizontal x-y-distance that the molecule goes
+def calc_hor_dist(x_traj, y_traj, ffs, ffe) -> np.ndarray:
+    """
+    Calculate the horizontal x-y-distance that the molecule goes
     when going through the membrane
 
     Args:
-        x_traj (_type_): _description_
-        y_traj (_type_): _description_
-        ffs (_type_): _description_
-        ffe (_type_): _description_
+        x_traj (_type_): all x trajectories of the passages
+        y_traj (_type_): all y trajectories of the passages
+        ffs (_type_): start times of the transitions
+        ffe (_type_): end times of the transitions
 
     Raises:
-        Exception: _description_
+        Exception: raises an exception if a pbc (periodic boundary condition) jump is detected
 
     Returns:
-        _type_: _description_
+        _type_: horizontal distances of the passages
     """
     """
     x_traj and y_traj are all the x and y trajectories of the passages
     ffs and ffe are the start and endimes of the transitions
     """
-    # print("ooooooo")
+    # TODO avoid using for loops and instead use numpy methods
     distances = []
     for i in range(x_traj.shape[0]):
-        # Shape[0] returns size of first dimension (number of trajs)
         X = x_traj[i, :]
         Y = y_traj[i, :]
         distance = 0
@@ -60,14 +60,21 @@ def calc_hor_dist(x_traj, y_traj, ffs, ffe):
 
 def path_cat(X, Y, ffs, ffe):
     """
-    x_traj and y_traj are all the x and y trajectories of transitions
-    ffs and ffe are the start and endimes of the transitions
+    find direct transitions
 
-    returns indizes of direct transitions
+    Args:
+        X (_type_): all x trajectories of the transitions
+        Y (_type_): all y trajectories of the transitions
+        ffs (_type_): start times of the transitions
+        ffe (_type_): end times of the transitions
+
+    Returns:
+        _type_: indizes of direct transitions
     """
     d = []
-    # cutoff ab wann man definiert, dass nen teilchen sein direkten weg verlassen hat
+    # cutoff distance which defines when a particle has left its direct path
     # TODO: avaoid hard coding 4.5
+    # TODO: avoid using for loops and instead use numpy methods
     k = 4.5
     for i in range(X[:, 0].size):
         x0 = X[i, ffs[i]]
@@ -89,18 +96,20 @@ def findPassagesHexOptimised(T, lowerBound, upperBound) -> tuple:
     optimised in the case that p=1 and p_middle=1
     """
     raise NotImplementedError("This function is not fully implemented and tested yet")
+    # TODO: implement and test this function
     z_Trajs = T[:, :, 2]
     inside = (z_Trajs > lowerBound) & (z_Trajs < upperBound)
     diff = np.diff(inside, axis=1)
     ffs = np.where(diff == 1) - 1
     ffe = np.where(diff == -1) + 1
-    ffi = np.zeros(ffs[0].size)  # TODO: implement
+    ffi = np.zeros(ffs[0].size)
     return ffe, ffe, ffi
 
 
 def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
-    """measure start and endpoint of passages through the bounds.
-    returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)
+    """
+    Measure start and endpoint of passages through the bounds.
+    Returns the array of starting times and the array of endtimes (not in ns, but in timesteps!)
 
     Args:
         T (np.ndarray): trajectories: 3D array with shape (number of trajectories, number of timesteps, 3)
@@ -115,7 +124,7 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
         most basic definition of a transition.
 
     Returns:
-        _type_: flip start und end times in an array and the indizes of the S file which
+        _type_: flip start und end times (in timesteps) in an array and the indizes of the S file which
         trajectories have a transition; ffs is the last timestep where the traj is outside
         the bounds and ffe is the first timestep where the traj is outside the bounds again
 
@@ -124,6 +133,7 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
         AttributeError: 'list' object has no attribute 'astype' if the list of starting times ffs/ffe/indizes is empty and no passage was detected; check boundaries and trajectories
 
     """
+    # TODO avoid using for loops and instead use numpy methods
     number_of_traj = T[:, 0, 0].size
     number_of_timesteps = T[0, :, 0].size
     label = np.zeros(number_of_traj)  # how is the object labeled
@@ -180,7 +190,6 @@ def findPassages(T, isAtomAbove, isAtomBelow, p=1, p_middle=1) -> tuple:
                     if label[a] == 5:
                         label[a] = 4  # label as coming from above
 
-    # TODO raise exeption if no passage has been detected for better understanding of errors
     if len(indizes) == 0:
         raise Exception("no transition detected. Check traj files and boundaries")
 
@@ -196,9 +205,13 @@ def bin(A, lower_bound, upper_bound):
     label 2 means, its between the lower and upper bound
     label 3 means, its above the upper bound
 
-    A:  trajectories (from the xvg file, but without the time-column; each column is a trajectory)
-    l:  lower bound
-    u:  upper bound
+    Args:
+        A (np.ndarray): trajectories (from the xvg file, but without the time-column; each column is a trajectory)
+        lower_bound (float): lower bound
+        upper_bound (float): upper bound
+
+    Returns:
+        np.ndarray: trajectories with the labels 1, 2, 3
     """
     number_of_traj = A[:, 0].size
     number_of_timesteps = A[0, :].size
@@ -220,12 +233,12 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
     """
     Save a NumPy array to a text file.
 
-    Parameters:
-    arr (numpy.ndarray): The array to be saved.
-    path (str): The path to the output text file including the extension .txt.
+    Args:
+        arr (numpy.ndarray): The array to be saved.
+        path (str): The path to the output text file including the extension .txt.
 
     Returns:
-    None
+        None
     """
     try:
         with open(path, "w") as f:
@@ -259,7 +272,7 @@ def calculate_diffusion(L: float, passage_times: list):
 
 
 #########################################################################################
-# Funktionen aus Gottholds Skript #######################################################
+# START Functions from Gotthold Fläschners script #######################################
 def hom_cdf(x, D, i, L):
     t = (L) ** 2 / (i**2 * np.pi**2 * D)  # L^2/(i^2*pi^2*D)
     return (-1) ** (i - 1) * np.exp(-x / t)  # summand in Gl. 10 vanHijkoop
@@ -308,5 +321,5 @@ def hom(x, D, i, L):
     return (-1) ** (i - 1) * i**2 * np.exp(-x / t)
 
 
-# Ende Funktionen aus Gottholds Skript ##################################################
+# END Functions from Gotthold Fläschners script #########################################
 #########################################################################################

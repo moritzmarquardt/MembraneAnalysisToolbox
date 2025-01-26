@@ -12,7 +12,9 @@ from MembraneAnalysisToolbox.MembraneStructures import MembraneForPoreAnalysis
 class PoreAnalysis(MembraneAnalysis):
     """
     Class for analyzing Membrane pores.
-    for example the effective pore size or a density plot of the membrane pore.
+    This includes for example:
+    - The calculation of the effective pore size.
+    - The calculation of heat maps of the density of certain atoms in the membrane.
     """
 
     def __init__(
@@ -44,6 +46,18 @@ class PoreAnalysis(MembraneAnalysis):
         skip=50,
         bw="scott",
     ):
+        """
+        Analyze the density of the selected atoms in the membrane.
+
+        Parameters:
+            selectors (list): List of atom selectors.
+            z_range (Tuple): Tuple containing the z-axis constraints (z_min, z_max).
+            skip (int): Skip every n-th frame.
+            bw (str): Bandwidth method for the KDE.
+
+        Returns:
+            tuple: A tuple containing the density values and the figure object.
+        """
         self._allocateTrajectories(selectors)
 
         selectors_positions = []
@@ -92,7 +106,18 @@ class PoreAnalysis(MembraneAnalysis):
         skip=50,
         bw="scott",
     ):
-        """same thing as analyseDensity but each selector is normalised on its own and added to the plot"""
+        """
+        same thing as analyseDensity but each selector is normalised on its own and added to the plot
+
+        Parameters:
+            selectors (list): List of atom selectors.
+            z_range (Tuple): Tuple containing the z-axis constraints (z_min, z_max).
+            skip (int): Skip every n-th frame.
+            bw (str): Bandwidth method for the KDE.
+
+        Returns:
+            tuple: A tuple containing the density values and the figure object.
+        """
         self._allocateTrajectories(selectors)
 
         selectors_positions = []
@@ -151,6 +176,20 @@ class PoreAnalysis(MembraneAnalysis):
         bins="auto",
         skip: int = 50,
     ):
+        """
+        Calculate the effective pore size of the membrane.
+
+        Parameters:
+            solvent_selectors (list): List of atom selectors for the solvent.
+            z_constraints (Tuple): Tuple containing the z-axis constraints (z_min, z_max).
+            y_constraints (Tuple): Tuple containing the y-axis constraints (y_min, y_max).
+            strategy (str): Strategy for calculating the pore size.
+            bins (int): Number of bins for the histogram.
+            skip (int): Skip every n-th frame.
+
+        Returns:
+            tuple: A tuple containing the lower and upper edges of the pore size distribution and the figure object.
+        """
         self._allocateTrajectories(solvent_selectors)
         self._allocateTrajectories(self.membrane.selectors)
 
@@ -214,6 +253,7 @@ class PoreAnalysis(MembraneAnalysis):
         skip: int = 50,
         bw="scott",
     ):
+        # TODO implement and test this function.
         combined_membrane_trajectories = []
         for selector in self.membrane.selectors:
             combined_membrane_trajectories.append(
@@ -292,6 +332,8 @@ class PoreAnalysis(MembraneAnalysis):
         return m_x_opt + x_threshold[0], m_y_opt + y_threshold[0]
 
     def radialDensityFunction(self, resnames):
+        # TODO implement and test this function.
+        raise NotImplementedError
         pass
 
     def analyseConstraints(self, membrane_selector, y_constraints, z_constraints):
@@ -416,7 +458,7 @@ class PoreAnalysis(MembraneAnalysis):
         edges,
     ):
         """
-        Plot the data.
+        Plot the data for the effective pore size calculation.
 
         Returns:
         - None

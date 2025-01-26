@@ -1,14 +1,13 @@
 # Membrane Analysis Toolbox
+With this toolbox you can analyse **molecular dynamics (MD)** simulation data to investigate properties of **membranes**.  
+It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing **nanoporous carbon materials (NCMs)** membranes and their properties such as diffusion.  
+Due to the modular and object oriented structure, it may be used or extended for other projects and the analysis of all kinds of membranes in molecular dynamics simulations.  
 
-The MembraneAnalysisToolbox is a Python package than can be installed in a python environment via pip.
-
-This toolbox contains methods for analysing molecular dynamics simulation data of Membranes.
-It has been developed in the group of Kristyna Pluhackova at the University of Stuttgart for analysing nanoporous carbon materials (NCMs) and their properties. However due to the modular and object oriented structure, it may be used or extended for other projects and the analysis of all kinds of membranes in molecular dynamics simulations.
 
 ## Main Components:
 - TransitionPathAnalysis class with the following key features:
     - Analyse passages through membrane and their **passage time distribution**
-    - Calculate the **diffusion coefficient** for a solvent
+    - Calculate the **diffusion coefficient** for a solvent using the first passage time theory (FPT)
 - EffectivePoreSizeAnalysis class with the following key features:
     - Analyse the **effective pore radius** of a membrane pore
     - Analyse the density of molecules in the pore using kernel methods for a **density heatmap**

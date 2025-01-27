@@ -262,6 +262,9 @@ def calculate_diffusion(L: float, passage_times: list):
     Returns:
         D_hom_cdf: diffusion coefficient
     """
+    # CDF
+    # used CDF because Gotthold Fläschner script uses CDF
+    # even for the PDF fit of his script, CDF is used in the homogenous case
     ecdf = ECDF(passage_times)
 
     params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)

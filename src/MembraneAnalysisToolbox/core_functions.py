@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import least_squares
+from scipy.optimize import curve_fit, least_squares
 from statsmodels.distributions.empirical_distribution import ECDF
 
 """
@@ -260,7 +260,7 @@ def calculate_diffusion(L: float, passage_times: list):
         passage_times: passage times in ns
 
     Returns:
-        D_hom_cdf: diffusion coefficient
+        D_hom: diffusion coefficient calculated using PDF fit
     """
     # CDF
     # used CDF because Gotthold Fläschner script uses CDF
@@ -271,7 +271,24 @@ def calculate_diffusion(L: float, passage_times: list):
 
     D_hom_cdf = params_hom_cdf[0]
 
-    return D_hom_cdf
+    # PDF
+    # PREPARE DATA
+    idx = (np.abs(ecdf.y - 0.5)).argmin()
+    centertime = ecdf.x[idx]
+    bins = int(10 * np.max(passage_times) / centertime)
+    histo, edges = np.histogram(passage_times, bins, density=True)
+    center = edges - (edges[2] - edges[1])
+    center = np.delete(center, 0)
+    edges = np.delete(edges, 0)
+
+    # FIT DATA
+    params_hom = fitting_hom_lsq(center[0:], histo[0:], L)
+
+    D_hom = params_hom[0]
+
+    print(f"ratio cdf / pdf: {D_hom_cdf / D_hom}")
+
+    return D_hom
 
 
 #########################################################################################
@@ -311,17 +328,37 @@ def fitting_hom_cdf_lsq(x_data, y_data, L):
     return res_robust.x
 
 
+def hom(x, D, i, L):
+    t = (L) ** 2 / (i**2 * np.pi**2 * D)
+    return (-1) ** (i - 1) * i**2 * np.exp(-x / t)  # equation 9 vanHijkoop
+
+
 def fitfunc_hom(x, D, L):
-    i = 151
+    i = 151  # not to infinity but to 151 (approximation of the sum)
     result = 0
     for j in range(1, i):
         result = result + hom(x, D, j, L)
     return 2 * np.pi**2 * D / (L) ** 2 * result
 
 
-def hom(x, D, i, L):
-    t = (L) ** 2 / (i**2 * np.pi**2 * D)
-    return (-1) ** (i - 1) * i**2 * np.exp(-x / t)
+def fitfunc_hom_lsq(L):
+    def f(D, x, y):
+        i = 151
+        result = 0
+        for j in range(1, i):
+            result = result + hom(x, D, j, L)
+        return (
+            2 * np.pi**2 * D / (L) ** 2 * result - y
+        )  # difference between the fit using D and the data y
+
+    return f
+
+
+def fitting_hom_lsq(x_data, y_data, L):
+    res_robust = least_squares(
+        fitfunc_hom_lsq(L), x0=20, loss="soft_l1", args=(x_data, y_data)
+    )
+    return res_robust.x
 
 
 # END Functions from Gotthold Fläschners script #########################################

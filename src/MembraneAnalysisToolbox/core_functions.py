@@ -262,16 +262,17 @@ def calculate_diffusion(L: float, passage_times: list):
     Returns:
         D_hom: diffusion coefficient calculated using PDF fit
     """
-    # CDF
+    print(f"Calculating diffusion coefficient using a PDF fit ...")
+    # CDF ######################################
     # used CDF because Gotthold Fläschner script uses CDF
     # even for the PDF fit of his script, CDF is used in the homogenous case
     ecdf = ECDF(passage_times)
 
-    params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
+    # params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
 
-    D_hom_cdf = params_hom_cdf[0]
+    # D_hom_cdf = params_hom_cdf[0]
 
-    # PDF
+    # PDF ######################################
     # PREPARE DATA
     idx = (np.abs(ecdf.y - 0.5)).argmin()
     centertime = ecdf.x[idx]
@@ -286,13 +287,16 @@ def calculate_diffusion(L: float, passage_times: list):
 
     D_hom = params_hom[0]
 
-    print(f"ratio cdf / pdf: {D_hom_cdf / D_hom}")
+    # print(f"ratio cdf / pdf: {D_hom_cdf / D_hom}")
 
     return D_hom
 
 
 #########################################################################################
 # START Functions from Gotthold Fläschners script #######################################
+# These functions implement a PDF and CDF fit for fitting the first passage time approach
+# to the distribution of first passage times of molecules through a membrane.
+# The first passage time approach is described in the paper by van Hijkoop et al. (https://doi.org/10.1063/1.2761897)
 def hom_cdf(x, D, i, L):
     t = (L) ** 2 / (i**2 * np.pi**2 * D)  # L^2/(i^2*pi^2*D)
     return (-1) ** (i - 1) * np.exp(-x / t)  # summand in Gl. 10 vanHijkoop
@@ -330,7 +334,7 @@ def fitting_hom_cdf_lsq(x_data, y_data, L):
 
 def hom(x, D, i, L):
     t = (L) ** 2 / (i**2 * np.pi**2 * D)
-    return (-1) ** (i - 1) * i**2 * np.exp(-x / t)  # equation 9 vanHijkoop
+    return (-1) ** (i - 1) * i**2 * np.exp(-x / t)  # summand in equation 9 vanHijkoop
 
 
 def fitfunc_hom(x, D, L):
@@ -338,25 +342,25 @@ def fitfunc_hom(x, D, L):
     result = 0
     for j in range(1, i):
         result = result + hom(x, D, j, L)
-    return 2 * np.pi**2 * D / (L) ** 2 * result
+    return 2 * np.pi**2 * D / (L) ** 2 * result  # sum of equation 9 vanHijkoop
 
 
 def fitfunc_hom_lsq(L):
     def f(D, x, y):
-        i = 151
-        result = 0
-        for j in range(1, i):
-            result = result + hom(x, D, j, L)
-        return (
-            2 * np.pi**2 * D / (L) ** 2 * result - y
-        )  # difference between the fit using D and the data y
+        n = 151
+        sum = 0
+        for j in range(1, n):
+            sum = sum + hom(x, D, j, L)
+        eq = 2 * np.pi**2 * D / (L) ** 2 * sum
+        residuals = eq - y
+        return residuals  # difference vector between the fit using D and the data y
 
     return f
 
 
 def fitting_hom_lsq(x_data, y_data, L):
     res_robust = least_squares(
-        fitfunc_hom_lsq(L), x0=20, loss="soft_l1", args=(x_data, y_data)
+        fitfunc_hom_lsq(L), x0=20, loss="soft_l1", args=(x_data, y_data), f_scale=0.3
     )
     return res_robust.x
 

@@ -60,28 +60,45 @@ class TestDA(unittest.TestCase):
         self.assertTrue(abs(DA.D["resname HEX and name C1"] - 86.29359025824535) < 1e-3)
         self.assertTrue(abs(DA.D["resname DOD and name C2"] - 35.88624329954945) < 1e-3)
 
-        # PDF test
-        DA.calc_diffusion(
-            "resname HEX and name C1",
-            D_guess=DA.guess_D("resname HEX and name C1"),
-            method="PDF",
-        )
-        DA.calc_diffusion(
-            "resname DOD and name C2",
-            D_guess=DA.guess_D("resname DOD and name C2"),
-            method="PDF",
-        )
-
-        self.assertTrue(
-            abs(DA.D["resname HEX and name C1"] - 89, 96664981086349) < 1e-3
-        )
-        self.assertTrue(
-            abs(DA.D["resname DOD and name C2"] - 37, 55927855436053) < 1e-3
-        )
-
         self.assertEqual(DA.n_passages["resname HEX and name C1"], 2611)
         self.assertEqual(DA.n_passages["resname DOD and name C2"], 913)
         self.assertTrue(232 <= DA.membrane.lowerZ <= 234)  # exact: 233.23501586914062
+
+        # PDF test (new)
+        DA_new = DiffusionAnalysis(
+            topology_file=topol_file,
+            trajectory_file=traj_file,
+            results_dir=results_dir,
+            analysis_max_step_size_ps=200,
+            verbose=True,
+            membrane=structure,
+        )
+        DA_new.find_membrane_location()
+        DA_new.calc_passagetimes("resname HEX and name C1")
+        DA_new.calc_passagetimes("resname DOD and name C2")
+        DA_new.calc_diffusion(
+            "resname HEX and name C1",
+            D_guess=DA_new.guess_D("resname HEX and name C1"),
+            method="PDF",
+        )
+        DA_new.calc_diffusion(
+            "resname DOD and name C2",
+            D_guess=DA_new.guess_D("resname DOD and name C2"),
+            method="PDF",
+        )
+
+        self.assertTrue(
+            abs(DA_new.D["resname HEX and name C1"] - 89.96664981086349) < 1e-3
+        )
+        self.assertTrue(
+            abs(DA_new.D["resname DOD and name C2"] - 37.55927855436053) < 1e-3
+        )
+
+        self.assertEqual(DA_new.n_passages["resname HEX and name C1"], 2583)
+        self.assertEqual(DA_new.n_passages["resname DOD and name C2"], 905)
+        self.assertTrue(
+            232 <= DA_new.membrane.lowerZ <= 234
+        )  # exact: 233.23501586914062
 
 
 if __name__ == "__main__":

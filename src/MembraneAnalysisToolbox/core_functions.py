@@ -251,29 +251,21 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
         )
 
 
-def calculate_diffusion(L: float, passage_times: list):
+def fit_diffusion_pdf(L: float, passage_times: list, D_guess: float) -> float:
     """
     calculate diffusion using Gotthold Fläschner Script.
 
     Args:
         L: length of the membrane in Angstrom
         passage_times: passage times in ns
+        D_guess: initial guess for the diffusion coefficient
 
     Returns:
         D_hom: diffusion coefficient calculated using PDF fit
     """
     print(f"Calculating diffusion coefficient using a PDF fit ...")
-    # CDF ######################################
-    # used CDF because Gotthold Fläschner script uses CDF
-    # even for the PDF fit of his script, CDF is used in the homogenous case
     ecdf = ECDF(passage_times)
 
-    # params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
-
-    # D_hom_cdf = params_hom_cdf[0]
-    # print(f"(Diffusion coefficient using CDF fit: {D_hom_cdf})")
-
-    # PDF ######################################
     # PREPARE DATA
     idx = (np.abs(ecdf.y - 0.5)).argmin()
     centertime = ecdf.x[idx]
@@ -282,27 +274,26 @@ def calculate_diffusion(L: float, passage_times: list):
     center = edges - (edges[2] - edges[1])
     center = np.delete(center, 0)
     edges = np.delete(edges, 0)
-    # print(f"center: {center}")
-    # print(f"histo: {histo}")
-    # FIT DATA
-    # print(
-    #     f"potential starting point mean clac hijkoop: {L**2/(6*np.mean(passage_times))}"
-    # )
-    # D0 = L**2 / (6 * np.mean(passage_times))
+
     params_hom = fitting_hom_lsq(center[0:], histo[0:], L, D_guess)
-
     D_hom = params_hom[0]
-
-    # print(f"ratio cdf / pdf: {D_hom_cdf / D_hom}")
-
     return D_hom
+
+
+def fit_diffusion_cdf(L: float, passage_times: list, D_guess: float) -> float:
+    print(f"Calculating diffusion coefficient using a CDF fit ...")
+    ecdf = ECDF(passage_times)
+    params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
+    D_hom_cdf = params_hom_cdf[0]
+    return D_hom_cdf
 
 
 #########################################################################################
 # START Functions from Gotthold Fläschners script #######################################
 # These functions implement a PDF and CDF fit for fitting the first passage time approach
 # to the distribution of first passage times of molecules through a membrane.
-# The first passage time approach is described in the paper by van Hijkoop et al. (https://doi.org/10.1063/1.2761897)
+# The first passage time approach is described in the paper by van Hijkoop et al.
+# (https://doi.org/10.1063/1.2761897)
 def hom_cdf(x, D, i, L):
     t = (L) ** 2 / (i**2 * np.pi**2 * D)  # L^2/(i^2*pi^2*D)
     return (-1) ** (i - 1) * np.exp(-x / t)  # summand in Gl. 10 vanHijkoop
@@ -335,23 +326,6 @@ def fitting_hom_cdf_lsq(x_data, y_data, L):
         f_scale=0.3,
         args=(x_data, y_data),
     )
-    print("res_robust cdf")
-    print("res_robust")
-    # same plot for cdf fit
-    D_space = np.linspace(1, 1000, 1000)
-    least_squares_error = []
-    for D in D_space:
-        residuals_norm_squared = np.sum(
-            np.square(fitfunc_hom_cdf(x_data, D, L) - y_data)
-        )
-        least_squares_error.append(residuals_norm_squared)
-    import matplotlib.pyplot as plt
-
-    plt.plot(D_space, least_squares_error)
-    plt.xlabel("D")
-    plt.ylabel("Sum of squared residuals")
-    plt.title("Least squares error for different D values")
-    plt.show()
     return res_robust.x
 
 
@@ -383,48 +357,18 @@ def fitfunc_hom_lsq(L):
     return f
 
 
-def fitting_hom_lsq(x_data, y_data, L):
+def fitting_hom_lsq(x_data, y_data, L, D0):
+    # least squares depends on an initial value for D which has to be provided
+    # in order to find the right global minimum. It has shown that the PDF fit
+    # errors have not just one global min but several local minima. Therefore
+    # the initial value is required as a user input for the least squares fit.
+    # basin hopping is not suitable since it also depends on the initial value
+    # and the global minimum is not found in all cases.
+    # dual annealing also did not work since the bound for D is infinity on the
+    # positive axis.
     res_robust = least_squares(
-        fitfunc_hom_lsq(L), x0=20, loss="soft_l1", args=(x_data, y_data), f_scale=0.3
+        fitfunc_hom_lsq(L), x0=D0, loss="soft_l1", args=(x_data, y_data), f_scale=0.3
     )
-    print("res_robust")
-    print(res_robust)
-    # same but with no starting and other parameters
-    lq_res = least_squares(
-        fitfunc_hom_lsq(L), x0=20, args=(x_data, y_data), bounds=(0, np.inf)
-    )
-    print("lq_res")
-    print(lq_res)
-    # plot residual least squares error for D between 1 and 500
-    D_space = np.linspace(1, 1000, 1000)
-    least_squares_error = []
-    for D in D_space:
-        residuals_norm_squared = np.sum(
-            np.square(fitfunc_hom(x_data, D, L) - y_data)
-        )  # sum of squared residuals
-        least_squares_error.append(residuals_norm_squared)
-    import matplotlib.pyplot as plt
-
-    plt.plot(D_space, least_squares_error)
-    plt.xlabel("D")
-    plt.ylabel("Sum of squared residuals")
-    plt.title("Least squares error for different D values")
-    plt.show()
-    # same with basin hopping and then least squares
-    basin_res = basinhopping(
-        lambda D: np.sum(
-            np.square(fitfunc_hom(x_data, D, L) - y_data)
-        ),  # sum of squared residuals
-        x0=20,
-    )
-    print("basin_res")
-    print(basin_res)
-    lq_basin_res = least_squares(
-        fitfunc_hom_lsq(L), x0=basin_res.x, args=(x_data, y_data)
-    )
-    print("lq_basin_res")
-    print(lq_basin_res)
-
     return res_robust.x
 
 

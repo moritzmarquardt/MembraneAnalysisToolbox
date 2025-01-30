@@ -5,8 +5,9 @@ import numpy as np
 from statsmodels.distributions.empirical_distribution import ECDF
 
 from MembraneAnalysisToolbox.core_functions import (
-    calculate_diffusion,
     findPassages,
+    fit_diffusion_cdf,
+    fit_diffusion_pdf,
     fitfunc_hom,
     fitfunc_hom_cdf,
     save_1darr_to_txt,
@@ -165,13 +166,46 @@ class DiffusionAnalysis(MembraneAnalysis):
         )
         return fig, ax
 
-    def calc_diffusion(self, selector: str):
+    def guess_D(self, selector: str):
+        """
+        Guess the diffusion coefficient for the given selector which can be used as an initial guess for the fit.
+
+        Args:
+            selector (str): The selector to guess the diffusion coefficient for.
+
+        Returns:
+            D_guess (float): The guessed diffusion coefficient.
+        """
+        if self.membrane.L is None:
+            raise ValueError(
+                "L must be set before calculating the diffusion coefficient."
+            )
+
+        if selector not in self.passageTimes.keys():
+            raise ValueError(
+                "Passage times for the selector must be calculated before calculating the diffusion coefficient."
+            )
+
+        passage_times = self.passageTimes[selector] / 1000  # convert to ns
+        L = self.membrane.L
+
+        D_guess = L**2 / (
+            6 * np.mean(passage_times)
+        )  # mean of eq. 9 in Hijkoop solved for D
+        # this is basically a fit of means of the passage times to the mean of the FPT distribution
+        # so a very rough approximation but potentially a good startiung point for a local minimisation
+
+        return D_guess
+
+    def calc_diffusion(self, selector: str, D_guess: float, method: str = "PDF"):
+        # TODO rename to fit_diffusion_pdf()
         """
         Calculates the diffusion coefficient for the given selector.
         The diffusion coefficient is stored in self.D[selector].
 
         Args:
             selector (str): The selector to calculate the diffusion coefficient for.
+            D_guess (float): An initial guess for the diffusion coefficient.
         """
         if self.membrane.L is None:
             raise ValueError(
@@ -185,7 +219,14 @@ class DiffusionAnalysis(MembraneAnalysis):
 
         passage_times = self.passageTimes[selector] / 1000  # convert to ns
 
-        self.D[selector] = calculate_diffusion(self.membrane.L, passage_times)
+        if method == "PDF":
+            self.D[selector] = fit_diffusion_pdf(
+                self.membrane.L, passage_times, D_guess
+            )  # in A^2/ns since L is in A and passage times are in ns
+        elif method == "CDF":
+            self.D[selector] = fit_diffusion_cdf(
+                self.membrane.L, passage_times, D_guess
+            )  # in A^2/ns since L is in A and passage times are in ns
 
     def plot_diffusion(self, selector: str):
         """
@@ -270,16 +311,6 @@ class DiffusionAnalysis(MembraneAnalysis):
             label="prob. density",
         )
         plt.plot(x[1:], y2[1:], label="FPT fit (hom)", color="red", ls="dashed")
-        # plot vertical line for mean
-        plt.axvline(
-            np.mean(passage_times), color="black", linestyle="dashed", linewidth=1
-        )
-        plt.axvline(
-            self.membrane.L**2 / (12 * D), color="red", linestyle="dashed", linewidth=1
-        )
-        plt.axvline(
-            self.membrane.L**2 / (6 * D), color="blue", linestyle="dashed", linewidth=1
-        )
         plt.xlim(0, x_lim)
         plt.ylim(0, 1.2 * np.max(histo[0:]))
         plt.xticks(fontsize=fs)

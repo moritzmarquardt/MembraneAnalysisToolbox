@@ -270,6 +270,16 @@ class DiffusionAnalysis(MembraneAnalysis):
             label="prob. density",
         )
         plt.plot(x[1:], y2[1:], label="FPT fit (hom)", color="red", ls="dashed")
+        # plot vertical line for mean
+        plt.axvline(
+            np.mean(passage_times), color="black", linestyle="dashed", linewidth=1
+        )
+        plt.axvline(
+            self.membrane.L**2 / (12 * D), color="red", linestyle="dashed", linewidth=1
+        )
+        plt.axvline(
+            self.membrane.L**2 / (6 * D), color="blue", linestyle="dashed", linewidth=1
+        )
         plt.xlim(0, x_lim)
         plt.ylim(0, 1.2 * np.max(histo[0:]))
         plt.xticks(fontsize=fs)

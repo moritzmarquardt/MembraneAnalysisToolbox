@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import curve_fit, least_squares
+from scipy.optimize import basinhopping, curve_fit, dual_annealing, least_squares
 from statsmodels.distributions.empirical_distribution import ECDF
 
 """
@@ -271,6 +271,7 @@ def calculate_diffusion(L: float, passage_times: list):
     # params_hom_cdf = fitting_hom_cdf_lsq(ecdf.x[1:], ecdf.y[1:], L)
 
     # D_hom_cdf = params_hom_cdf[0]
+    # print(f"(Diffusion coefficient using CDF fit: {D_hom_cdf})")
 
     # PDF ######################################
     # PREPARE DATA
@@ -281,9 +282,14 @@ def calculate_diffusion(L: float, passage_times: list):
     center = edges - (edges[2] - edges[1])
     center = np.delete(center, 0)
     edges = np.delete(edges, 0)
-
+    # print(f"center: {center}")
+    # print(f"histo: {histo}")
     # FIT DATA
-    params_hom = fitting_hom_lsq(center[0:], histo[0:], L)
+    # print(
+    #     f"potential starting point mean clac hijkoop: {L**2/(6*np.mean(passage_times))}"
+    # )
+    # D0 = L**2 / (6 * np.mean(passage_times))
+    params_hom = fitting_hom_lsq(center[0:], histo[0:], L, D_guess)
 
     D_hom = params_hom[0]
 
@@ -329,6 +335,23 @@ def fitting_hom_cdf_lsq(x_data, y_data, L):
         f_scale=0.3,
         args=(x_data, y_data),
     )
+    print("res_robust cdf")
+    print("res_robust")
+    # same plot for cdf fit
+    D_space = np.linspace(1, 1000, 1000)
+    least_squares_error = []
+    for D in D_space:
+        residuals_norm_squared = np.sum(
+            np.square(fitfunc_hom_cdf(x_data, D, L) - y_data)
+        )
+        least_squares_error.append(residuals_norm_squared)
+    import matplotlib.pyplot as plt
+
+    plt.plot(D_space, least_squares_error)
+    plt.xlabel("D")
+    plt.ylabel("Sum of squared residuals")
+    plt.title("Least squares error for different D values")
+    plt.show()
     return res_robust.x
 
 
@@ -349,8 +372,10 @@ def fitfunc_hom_lsq(L):
     def f(D, x, y):
         n = 151
         sum = 0
+        # print("start sum")
         for j in range(1, n):
             sum = sum + hom(x, D, j, L)
+            # print(np.sum(hom(x, D, j, L)))
         eq = 2 * np.pi**2 * D / (L) ** 2 * sum
         residuals = eq - y
         return residuals  # difference vector between the fit using D and the data y
@@ -362,6 +387,44 @@ def fitting_hom_lsq(x_data, y_data, L):
     res_robust = least_squares(
         fitfunc_hom_lsq(L), x0=20, loss="soft_l1", args=(x_data, y_data), f_scale=0.3
     )
+    print("res_robust")
+    print(res_robust)
+    # same but with no starting and other parameters
+    lq_res = least_squares(
+        fitfunc_hom_lsq(L), x0=20, args=(x_data, y_data), bounds=(0, np.inf)
+    )
+    print("lq_res")
+    print(lq_res)
+    # plot residual least squares error for D between 1 and 500
+    D_space = np.linspace(1, 1000, 1000)
+    least_squares_error = []
+    for D in D_space:
+        residuals_norm_squared = np.sum(
+            np.square(fitfunc_hom(x_data, D, L) - y_data)
+        )  # sum of squared residuals
+        least_squares_error.append(residuals_norm_squared)
+    import matplotlib.pyplot as plt
+
+    plt.plot(D_space, least_squares_error)
+    plt.xlabel("D")
+    plt.ylabel("Sum of squared residuals")
+    plt.title("Least squares error for different D values")
+    plt.show()
+    # same with basin hopping and then least squares
+    basin_res = basinhopping(
+        lambda D: np.sum(
+            np.square(fitfunc_hom(x_data, D, L) - y_data)
+        ),  # sum of squared residuals
+        x0=20,
+    )
+    print("basin_res")
+    print(basin_res)
+    lq_basin_res = least_squares(
+        fitfunc_hom_lsq(L), x0=basin_res.x, args=(x_data, y_data)
+    )
+    print("lq_basin_res")
+    print(lq_basin_res)
+
     return res_robust.x
 
 

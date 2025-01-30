@@ -465,27 +465,39 @@ class PoreAnalysis(MembraneAnalysis):
         """
         lower_edge, upper_edge = edges
 
-        fig = plt.figure()
+        fig = plt.figure(dpi=300)
         x = np.linspace(membrane_hist_edges[0], membrane_hist_edges[-1], 1000)
         plt.plot(
             x / 10,
             self.hist_linear_interpol_eval(x, membrane_hist_edges, membrane_hist),
-            label="C",
+            label="Carbon\nmaterial",
+            color="gray",
         )
         plt.plot(
             x / 10,
             self.hist_linear_interpol_eval(x, solvent_hist_edges, solvent_hist),
-            label="HEX & DOD",
+            label="Solvent",
+            color="blue",
         )
-        plt.axvline(x=lower_edge / 10, color="r", linestyle="--")
+        plt.axvline(
+            x=lower_edge / 10,
+            color="r",
+            linestyle="--",
+            label="Effective\nboundaries",
+        )
         plt.axvline(x=upper_edge / 10, color="r", linestyle="--")
-        plt.xlabel("X-axis in nm", fontsize="x-large")
-        plt.ylabel("Frequency", fontsize="x-large")
-        plt.title(
-            "Histogram along the X-axis with Z and Y constraints", fontsize="x-large"
-        )
+        plt.xlabel("X-axis / nm", fontsize="x-large")
+        plt.ylabel("Molecule frequency", fontsize="x-large")
+        # plt.title("Effective pore diameter", fontsize="x-large")
         plt.grid(True)
+        # make grid lines less visible and more in the background
+        plt.gca().yaxis.grid(alpha=0.2)
+        plt.gca().xaxis.grid(alpha=0.2)
+        # add x ticks in red where the upper and lower edge are
         plt.legend(fontsize="large")
+        # make y axis go to 25% higher than the highest value of the histograms
+        plt.ylim(0, 1.25 * max(max(membrane_hist), max(solvent_hist)))
+        plt.tight_layout()
         # plt.show()
         return fig
 

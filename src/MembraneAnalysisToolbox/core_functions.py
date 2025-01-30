@@ -253,7 +253,7 @@ def save_1darr_to_txt(arr: np.ndarray, path: str):
 
 def fit_diffusion_pdf(L: float, passage_times: list, D_guess: float) -> float:
     """
-    calculate diffusion using Gotthold Fläschner Script.
+    calculate diffusion using Gotthold Fläschner Script and a PDF fit.
 
     Args:
         L: length of the membrane in Angstrom
@@ -261,7 +261,7 @@ def fit_diffusion_pdf(L: float, passage_times: list, D_guess: float) -> float:
         D_guess: initial guess for the diffusion coefficient
 
     Returns:
-        D_hom: diffusion coefficient calculated using PDF fit
+        D_hom: diffusion coefficient calculated using PDF fit in Angstrom^2/ns
     """
     print(f"Calculating diffusion coefficient using a PDF fit ...")
     ecdf = ECDF(passage_times)
@@ -358,14 +358,16 @@ def fitfunc_hom_lsq(L):
 
 
 def fitting_hom_lsq(x_data, y_data, L, D0):
-    # least squares depends on an initial value for D which has to be provided
-    # in order to find the right global minimum. It has shown that the PDF fit
-    # errors have not just one global min but several local minima. Therefore
-    # the initial value is required as a user input for the least squares fit.
-    # basin hopping is not suitable since it also depends on the initial value
-    # and the global minimum is not found in all cases.
-    # dual annealing also did not work since the bound for D is infinity on the
-    # positive axis.
+    """
+    least squares depends on an initial value for D which has to be provided
+    in order to find the right global minimum. It has shown that the PDF fit
+    errors have not just one global min but several local minima. Therefore
+    the initial value is required as a user input for the least squares fit.
+    basin hopping is not suitable since it also depends on the initial value
+    and the global minimum is not found in all cases.
+    dual annealing also did not work since the bound for D is infinity on the
+    positive axis.
+    """
     res_robust = least_squares(
         fitfunc_hom_lsq(L), x0=D0, loss="soft_l1", args=(x_data, y_data), f_scale=0.3
     )

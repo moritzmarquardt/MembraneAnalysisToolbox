@@ -68,8 +68,8 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
 
     Attributes:
         selectors (list[str]): The selector for the membrane atoms
-        L (float): The thickness of the membrane
-        lowerZ (float): The lower boundary of the membrane
+        L (float): The thickness of the membrane in Angstrom
+        lowerZ (float): The lower boundary of the membrane in Angstrom
         isAtomAbove (callable): Function to check if an atom is above the membrane
         isAtomBelow (callable): Function to check if an atom is below
 
@@ -125,7 +125,7 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
             raise ValueError(
                 "The lower boundary of the hexagonal structure is not set. Run find_location() first."
             )
-        print(f"Lower boundary of the hexagonal structure: {self.lowerZ}")
+        print(f"Lower boundary of the hexagonal structure: {self.lowerZ} Angstrom")
 
     def plot_location(self, trajectories):
         """
@@ -151,7 +151,7 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         ax1.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        ax1.set_xlabel("z-coordinate")
+        ax1.set_xlabel("z-coordinate (Angstrom)")
         ax1.set_ylabel("Density")
         ax1.set_title("Histogram of the z-coordinates of the membrane")
         ax1.legend()
@@ -164,7 +164,7 @@ class HexagonalMembrane(MembraneForDiffusionAnalysis, MembraneForPoreAnalysis):
         ax2.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        ax2.set_xlabel("z-coordinate")
+        ax2.set_xlabel("z-coordinate (Angstrom)")
         ax2.set_ylabel("CDF")
         ax2.set_title("CDF of the z-coordinates of the membrane")
         ax2.legend()
@@ -257,12 +257,12 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
 
     Attributes:
         selectors (list[str]): The selector for the membrane atoms
-        L (float): The thickness of the membrane
+        L (float): The thickness of the membrane in Angstrom
         cube_arrangement (tuple): The arrangement of the cubes in the membrane.
             The tuple should be of the form (n_x, n_y, n_z) where n_x, n_y, n_z are the number of cubes in the x, y, z direction
         cube_size (float): The size of one cube
         pore_radius (float): The radius of the pore
-        lowerZ (float): The lower boundary of the membrane
+        lowerZ (float): The lower boundary of the membrane in Angstrom
         isAtomAbove (callable): Function to check if an atom is above the membrane
         isAtomBelow (callable): Function to check if an atom is below
 
@@ -327,7 +327,7 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
             raise ValueError(
                 "The lower boundary of the cubic structure is not set. Run find_location() first."
             )
-        print(f"Lower boundary of the cubic structure: {self.lowerZ}")
+        print(f"Lower boundary of the cubic structure: {self.lowerZ} Angstrom")
 
     def plot_location(self, trajectories):
         """
@@ -353,7 +353,7 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         ax1.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        ax1.set_xlabel("z-coordinate")
+        ax1.set_xlabel("z-coordinate (Angstrom)")
         ax1.set_ylabel("Density")
         ax1.set_title("Histogram of the z-coordinates of the membrane")
         ax1.legend()
@@ -366,7 +366,7 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
         ax2.axvline(
             self.lowerZ + self.L, color="r", linestyle="--", label="Upper boundary"
         )
-        ax2.set_xlabel("z-coordinate")
+        ax2.set_xlabel("z-coordinate (Angstrom)")
         ax2.set_ylabel("CDF")
         ax2.set_title("CDF of the z-coordinates of the membrane")
         ax2.legend()
@@ -515,6 +515,13 @@ class CubicMembrane(MembraneForDiffusionAnalysis):
 class Solvent(MembraneForDiffusionAnalysis):
     """
     Membrane Structure implementation to be able to analyse the solvent system, where no membrane is present.
+
+    Attributes:
+        lowerZ (float): The lower boundary of the solvent system (Angstrom)
+        upperZ (float): The upper boundary of the solvent system (Angstrom)
+        L (float): The thickness of the solvent system (Angstrom)
+        isAtomAbove (callable): Function to check if an atom is above the solvent system
+        isAtomBelow (callable): Function to check if an atom is below the solvent system
     """
 
     def __init__(self, lowerZ, upperZ, L):
@@ -530,7 +537,7 @@ class Solvent(MembraneForDiffusionAnalysis):
 
     def print_location(self):
         print(
-            f"Solvent system with virtual borders at z={self.lowerZ} and z={self.upperZ}"
+            f"Solvent system with virtual borders at z={self.lowerZ} Angstrom and z={self.upperZ} Angstrom"
         )
 
     def plot_location(self, trajectories):
@@ -549,7 +556,7 @@ class Solvent(MembraneForDiffusionAnalysis):
         ax1.hist(z, bins=50, density=True, label="Histogram")
         ax1.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
         ax1.axvline(self.upperZ, color="r", linestyle="--", label="Upper boundary")
-        ax1.set_xlabel("z-coordinate")
+        ax1.set_xlabel("z-coordinate (Angstrom)")
         ax1.set_ylabel("Density")
         ax1.set_title("Histogram of the z-coordinates of the solvent")
         ax1.legend()
@@ -560,7 +567,7 @@ class Solvent(MembraneForDiffusionAnalysis):
         ax2.plot(x, y, label="CDF", marker="o")
         ax2.axvline(self.lowerZ, color="r", linestyle="--", label="Lower boundary")
         ax2.axvline(self.upperZ, color="r", linestyle="--", label="Upper boundary")
-        ax2.set_xlabel("z-coordinate")
+        ax2.set_xlabel("z-coordinate (Angstrom)")
         ax2.set_ylabel("CDF")
         ax2.set_title("CDF of the z-coordinates of the solvent")
         ax2.legend()

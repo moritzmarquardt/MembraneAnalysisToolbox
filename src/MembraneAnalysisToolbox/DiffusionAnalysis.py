@@ -99,7 +99,7 @@ class DiffusionAnalysis(MembraneAnalysis):
     def calc_passagetimes(self, selector: str):
         """
         Calculates the passage times for the given selectors.
-        store it in ps in self.passageTimes[selector]
+        store it in ps in self.passageTimes[selector].
 
         Args:
             selectors (str): The selectors to calculate passage times for.
@@ -169,12 +169,15 @@ class DiffusionAnalysis(MembraneAnalysis):
     def guess_D(self, selector: str):
         """
         Guess the diffusion coefficient for the given selector which can be used as an initial guess for the fit.
+        Unit of the guess is A^2/ns.
+        This guess is basically a fit of means of the passage times to the mean of the FPT distribution
+        so a very rough approximation but potentially a good startiung point for a local minimisation
 
         Args:
             selector (str): The selector to guess the diffusion coefficient for.
 
         Returns:
-            D_guess (float): The guessed diffusion coefficient.
+            D_guess (float): The guessed diffusion coefficient in A^2/ns.
         """
         if self.membrane.L is None:
             raise ValueError(
@@ -187,21 +190,18 @@ class DiffusionAnalysis(MembraneAnalysis):
             )
 
         passage_times = self.passageTimes[selector] / 1000  # convert to ns
-        L = self.membrane.L
+        L = self.membrane.L  # in Angstrom
 
         D_guess = L**2 / (
             6 * np.mean(passage_times)
         )  # mean of eq. 9 in Hijkoop solved for D
-        # this is basically a fit of means of the passage times to the mean of the FPT distribution
-        # so a very rough approximation but potentially a good startiung point for a local minimisation
 
         return D_guess
 
     def calc_diffusion(self, selector: str, D_guess: float, method: str = "PDF"):
-        # TODO rename to fit_diffusion_pdf()
         """
         Calculates the diffusion coefficient for the given selector.
-        The diffusion coefficient is stored in self.D[selector].
+        The diffusion coefficient is stored in self.D[selector] in A^2/ns.
 
         Args:
             selector (str): The selector to calculate the diffusion coefficient for.

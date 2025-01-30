@@ -113,7 +113,7 @@ class PoreAnalysis(MembraneAnalysis):
             selectors (list): List of atom selectors.
             z_range (Tuple): Tuple containing the z-axis constraints (z_min, z_max).
             skip (int): Skip every n-th frame.
-            bw (str): Bandwidth method for the KDE.
+            bw (str): Bandwidth method for the KDE in Angstrom.
 
         Returns:
             tuple: A tuple containing the density values and the figure object.
@@ -181,14 +181,14 @@ class PoreAnalysis(MembraneAnalysis):
 
         Parameters:
             solvent_selectors (list): List of atom selectors for the solvent.
-            z_constraints (Tuple): Tuple containing the z-axis constraints (z_min, z_max).
-            y_constraints (Tuple): Tuple containing the y-axis constraints (y_min, y_max).
+            z_constraints (Tuple): Tuple containing the z-axis constraints (z_min, z_max) in Angstrom.
+            y_constraints (Tuple): Tuple containing the y-axis constraints (y_min, y_max) in Angstrom.
             strategy (str): Strategy for calculating the pore size.
             bins (int): Number of bins for the histogram.
             skip (int): Skip every n-th frame.
 
         Returns:
-            tuple: A tuple containing the lower and upper edges of the pore size distribution and the figure object.
+            tuple: A tuple containing the lower and upper edges of the pore size distribution and the figure object in Angstrom.
         """
         self._allocateTrajectories(solvent_selectors)
         self._allocateTrajectories(self.membrane.selectors)
@@ -459,6 +459,7 @@ class PoreAnalysis(MembraneAnalysis):
     ):
         """
         Plot the data for the effective pore size calculation.
+        The x axis is in nm.
 
         Returns:
         - None
